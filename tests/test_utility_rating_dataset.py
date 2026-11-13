@@ -5,13 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from backend.contract.utility_rating import (
+from contract.utility_rating import (
     TimeWindow,
     UtilityCategory,
     UtilityDataset,
 )
-from backend.utility_rating import score_city
-from backend.utility_rating.dataset import parse_dataset
+from utility_rating import score_city
+from utility_rating.dataset import parse_dataset
 
 SCHEMA = json.loads(
     (

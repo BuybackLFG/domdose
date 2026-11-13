@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from backend.contract.utility_rating import OutageEvent, OutageKind, TimeWindow
+from contract.utility_rating import OutageEvent, OutageKind, TimeWindow
 
 _KIND_WEIGHT: dict[OutageKind, float] = {
     OutageKind.EMERGENCY: 1.0,

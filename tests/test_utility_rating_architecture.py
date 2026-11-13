@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-PACKAGE = Path(__file__).parent.parent / "backend" / "utility_rating"
+PACKAGE = Path(__file__).parent.parent / "utility_rating"
 FORBIDDEN_IMPORTS = {
     "fastapi",
     "httpx",

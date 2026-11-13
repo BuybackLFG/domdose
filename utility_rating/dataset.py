@@ -4,8 +4,10 @@ from collections.abc import Mapping
 from datetime import datetime, timedelta
 
 from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError, UnknownType
+from referencing.exceptions import Unresolvable
 
-from backend.contract.utility_rating import (
+from contract.utility_rating import (
     House,
     OutageEvent,
     OutageKind,
@@ -48,10 +50,14 @@ def parse_dataset(raw: Mapping, schema: Mapping) -> UtilityDataset:
 
 def _validate_schema(raw: Mapping, schema: Mapping) -> None:
     """Отклонить raw, не проходящий JSON Schema 2020-12."""
-    validator = Draft202012Validator(
-        schema, format_checker=Draft202012Validator.FORMAT_CHECKER
-    )
-    errors = sorted(validator.iter_errors(raw), key=lambda error: error.json_path)
+    try:
+        Draft202012Validator.check_schema(schema)
+        validator = Draft202012Validator(
+            schema, format_checker=Draft202012Validator.FORMAT_CHECKER
+        )
+        errors = sorted(validator.iter_errors(raw), key=lambda error: error.json_path)
+    except (SchemaError, UnknownType, Unresolvable) as exc:
+        raise ValueError("dataset schema is invalid") from exc
     if errors:
         details = "; ".join(f"{error.json_path}: {error.message}" for error in errors)
         raise ValueError(f"dataset does not match schema: {details}")

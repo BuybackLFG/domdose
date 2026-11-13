@@ -4,7 +4,7 @@ import math
 from datetime import datetime, timedelta
 from typing import Mapping
 
-from backend.contract.utility_rating import (
+from contract.utility_rating import (
     CategoryRating,
     CityRating,
     House,
@@ -16,7 +16,7 @@ from backend.contract.utility_rating import (
     UtilityCategory,
     UtilityDataset,
 )
-from backend.utility_rating.metrics import (
+from utility_rating.metrics import (
     clipped_duration_hours,
     event_weight,
     overlaps_window,

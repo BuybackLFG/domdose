@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from backend.contract.utility_rating import (
+from contract.utility_rating import (
     House,
     MetricValues,
     OutageEvent,
@@ -12,7 +12,7 @@ from backend.contract.utility_rating import (
     UtilityCategory,
     UtilityDataset,
 )
-from backend.utility_rating import score_city
+from utility_rating import score_city
 
 TZ = timezone(timedelta(hours=10))
 WINDOW_START = datetime(2026, 1, 1, tzinfo=TZ)
