@@ -47,7 +47,7 @@ For JSON input use `read_dataset(mapping_or_json_or_bytes)`. Validation refuses 
 .\.venv\Scripts\python.exe scripts/inspect_dataset.py --dataset '<local dataset path>' --schema contract/dataset.schema.json --out .local/dataset-inspection.json
 ```
 
-The inspector reads local data and writes the requested report; it does not repair records, access sources, infer city population or produce reliability scores. Its candidate duplicate groups and missing card numbers are indicators, not independently confirmed duplicate/lost source events. Local reports and real datasets are excluded from publication.
+The inspector reads local data and writes the requested report; it does not repair records, access sources, infer city population or produce reliability scores. Its candidate duplicate groups and missing card numbers are indicators, not independently confirmed duplicate/lost source events. Local inspection reports are excluded from publication. The supplied candidate dataset is published explicitly at `data/datasets/communal-outages-2026.json`; its inclusion does not mean that it passes the semantic gate or is suitable for a complete rating. Heating season start is 2026-10-12, supplied by the dataset owner for the main part of the city without an accompanying source URL.
 
 ## Next boundary
 
