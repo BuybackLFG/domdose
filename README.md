@@ -50,7 +50,7 @@ cd frontend && npm run dev
 ## Контракт API
 
 ```bash
-./scripts/gen_api_types.sh   # frontend/src/types/api.ts из локального /openapi.json
+./scripts/gen_api_types.sh   # frontend/src/types/api.ts из OpenAPI текущего кода backend
 ```
 
 Сгенерированный файл коммитим. Если он разошёлся с OpenAPI, `check.sh` падает.
