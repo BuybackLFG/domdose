@@ -1,0 +1,32 @@
+[
+  {
+    "address": "Шилкинская, 11",
+    "type": "hot_water",
+    "date": "2026-08-10",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/vtoroy-etap-gidravlicheskikh-ispytaniy-prodlyen-dlya-nekotorykh-potrebiteley-vo-vladivostoke-adresa/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения на Шилкинской, 11",
+    "summary": "ДГК указала для дома период ограничения горячей воды из-за ремонта теплосетей с 10 августа 2026 года, 14:15, до 13 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Светланская, 155",
+    "type": "hot_water",
+    "date": "2026-08-06",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/vtoroy-etap-gidravlicheskikh-ispytaniy-prodlyen-dlya-nekotorykh-potrebiteley-vo-vladivostoke-adresa/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения на Светланской, 155",
+    "summary": "ДГК указала для дома период ограничения горячей воды из-за ремонта теплосетей с 6 августа 2026 года, 00:00, до 14 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Шилкинская, 11",
+    "type": "hot_water",
+    "date": "2026-09-29",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/primorskie-teplovye-seti-prodolzhayut-podgotovku-teplotrass-k-zime-adresa/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения на Шилкинской, 11",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 29 сентября 2026 года, 00:00, до 2 октября, 20:00 по местному времени."
+  }
+]

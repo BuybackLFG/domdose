@@ -57,6 +57,129 @@ def test_keeps_districts_separate_and_sorts_them(tmp_path: Path) -> None:
     assert events[0]["id"] != events[1]["id"]
 
 
+def test_resolves_full_address_to_same_event_as_house_id(tmp_path: Path) -> None:
+    source, output = tmp_path / "snapshot.json", tmp_path / "events.json"
+    houses = tmp_path / "houses.json"
+    write_snapshot(
+        houses,
+        [{"id": "test-house", "address": "г. Владивосток, ул. Берёзовая, 5", "district": "А"}],
+    )
+    write_snapshot(source, [notification(district="А")])
+    assert import_snapshot(source, output) == 1
+    previous_output = output.read_bytes()
+
+    row = notification(address="  Г. ВЛАДИВОСТОК,   УЛ. БЕРЕЗОВАЯ, 5  ")
+    del row["house_id"]
+    write_snapshot(source, [row])
+
+    assert import_snapshot(source, output, houses=houses) == 1
+    assert output.read_bytes() == previous_output
+
+
+@pytest.mark.parametrize("field", ["house_id", "district"])
+def test_rejects_conflicting_location_fields(tmp_path: Path, field: str) -> None:
+    source, output = tmp_path / "snapshot.json", tmp_path / "events.json"
+    houses = tmp_path / "houses.json"
+    address = "г. Владивосток, ул. Берёзовая, 5"
+    write_snapshot(houses, [{"id": "test-house", "address": address, "district": "А"}])
+    row = notification(address=address, district="А")
+    write_snapshot(source, [row])
+    assert import_snapshot(source, output, houses=houses) == 1
+    previous_output = output.read_bytes()
+
+    write_snapshot(source, [{**row, field: "конфликт"}])
+    with pytest.raises(ValueError, match=f"запись 1: {field}: не совпадает"):
+        import_snapshot(source, output, houses=houses)
+
+    assert output.read_bytes() == previous_output
+
+
+@pytest.mark.parametrize("district_fields", [{}, {"district": None}])
+def test_resolves_house_with_unknown_district(
+    tmp_path: Path, district_fields: dict[str, object]
+) -> None:
+    source, output = tmp_path / "snapshot.json", tmp_path / "events.json"
+    houses = tmp_path / "houses.json"
+    address = "Берёзовая, 5"
+    write_snapshot(houses, [{"id": "test-house", "address": address, **district_fields}])
+    write_snapshot(source, [notification()])
+    assert import_snapshot(source, output) == 1
+    previous_output = output.read_bytes()
+
+    row = notification(address=address)
+    del row["house_id"]
+    write_snapshot(source, [row])
+    assert import_snapshot(source, output, houses=houses) == 1
+    assert output.read_bytes() == previous_output
+
+    write_snapshot(source, [{**row, "district": "А"}])
+    with pytest.raises(ValueError, match="запись 1: district: не совпадает"):
+        import_snapshot(source, output, houses=houses)
+    assert output.read_bytes() == previous_output
+
+
+def test_duplicate_catalog_id_preserves_output(tmp_path: Path) -> None:
+    source, output = tmp_path / "snapshot.json", tmp_path / "events.json"
+    houses = tmp_path / "houses.json"
+    write_snapshot(source, [notification()])
+    import_snapshot(source, output)
+    previous_output = output.read_bytes()
+    write_snapshot(
+        houses,
+        [
+            {"id": "test-house", "address": "Берёзовая, 5", "district": "А"},
+            {"id": "test-house", "address": "Берёзовая, 7", "district": "А"},
+        ],
+    )
+    write_snapshot(source, [notification(address="Берёзовая, 5")])
+
+    with pytest.raises(ValueError, match="--houses, запись 2: id: .*test-house"):
+        import_snapshot(source, output, houses=houses)
+    assert output.read_bytes() == previous_output
+
+
+@pytest.mark.parametrize(
+    "address, catalog, use_catalog, error",
+    [
+        (
+            "г. Владивосток, ул. Берёзовая, 5",
+            ["г. Владивосток, ул. Берёзовая, 5 к. 1"],
+            True,
+            "не найден",
+        ),
+        ("ул. Берёзовая, 5", ["г. Владивосток, ул. Берёзовая, 5"], True, "не найден"),
+        (
+            "г. Владивосток, ул. Берёзовая, 5",
+            ["г. Владивосток, ул. Берёзовая, 5", "г. Владивосток, ул. Березовая, 5"],
+            True,
+            "неоднозначен",
+        ),
+        ("г. Владивосток, ул. Берёзовая, 5", [], False, "--houses"),
+    ],
+)
+def test_unresolved_address_preserves_output(
+    tmp_path: Path, address: str, catalog: list[str], use_catalog: bool, error: str
+) -> None:
+    source, output = tmp_path / "snapshot.json", tmp_path / "events.json"
+    houses = tmp_path / "houses.json"
+    write_snapshot(
+        houses,
+        [
+            {"id": f"house-{index}", "address": entry, "district": "А"}
+            for index, entry in enumerate(catalog)
+        ],
+    )
+    write_snapshot(source, [notification()])
+    import_snapshot(source, output)
+    previous_output = output.read_bytes()
+    write_snapshot(source, [notification(), notification(address=address)])
+
+    with pytest.raises(ValueError, match=f"запись 2: address: .*{error}"):
+        import_snapshot(source, output, houses=houses if use_catalog else None)
+
+    assert output.read_bytes() == previous_output
+
+
 @pytest.mark.parametrize(
     "bad_fields, error",
     [

@@ -1,9 +1,11 @@
 """Преобразование локального снимка официальных уведомлений в JSON-массив событий.
 
-Из backend: uv run python -m app.ingest.official SNAPSHOT.json EVENTS.json
+Из backend: uv run python -m app.ingest.official SNAPSHOT.json EVENTS.json [--houses HOUSES.json]
 Вход — проверенный редактором JSON-массив с type, date (YYYY-MM-DD), severity (1–3), source_url,
 retrieved_at (YYYY-MM-DD или ISO 8601 со смещением), title, summary и house_id
 или district. Если указаны оба, house_id задаёт ключ, а district сохраняется.
+Для записи с address нужен каталог домов.
+Совпадение по полному адресу даёт house_id и district, если район известен.
 При дубликатах побеждает более позднее retrieved_at (дата считается полуночью UTC).
 При равенстве побеждает лексикографически последняя каноническая JSON-запись.
 Выход целиком заменяется после проверки снимка.
@@ -33,12 +35,54 @@ EVENT_TYPES = {
 }
 
 type EventKey = tuple[str, str, str, str]
+type HouseCatalog = dict[str, list[dict[str, str]]]
 
 
 def _text(value: object, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field}: ожидалась непустая строка")
     return value.strip()
+
+
+def _address_key(address: str) -> str:
+    normalized = " ".join(address.casefold().replace("ё", "е").split())
+    return ",".join(part.strip() for part in normalized.split(","))
+
+
+def _load_houses(path: Path) -> HouseCatalog:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, list):
+        raise ValueError("--houses: ожидался JSON-массив домов")
+
+    catalog: HouseCatalog = {}
+    house_ids: set[str] = set()
+    for index, row in enumerate(raw, start=1):
+        try:
+            if not isinstance(row, dict):
+                raise ValueError("ожидался объект")
+            address = _address_key(_text(row.get("address"), "address"))
+            house_id = _text(row.get("id"), "id")
+            if house_id in house_ids:
+                raise ValueError(f"id: повторяющийся идентификатор {house_id!r}")
+            location = {"house_id": house_id}
+            if row.get("district") is not None:
+                location["district"] = _text(row["district"], "district")
+        except ValueError as exc:
+            raise ValueError(f"--houses, запись {index}: {exc}") from exc
+        house_ids.add(house_id)
+        catalog.setdefault(address, []).append(location)
+    return catalog
+
+
+def _address_location(address: str, houses: HouseCatalog | None) -> dict[str, str]:
+    if houses is None:
+        raise ValueError("address: требуется каталог --houses")
+    matches = houses.get(_address_key(address), [])
+    if not matches:
+        raise ValueError(f"address: адрес {address!r} не найден в каталоге --houses")
+    if len(matches) != 1:
+        raise ValueError(f"address: адрес {address!r} неоднозначен в каталоге --houses")
+    return matches[0]
 
 
 def _iso_date(value: str) -> date:
@@ -61,7 +105,9 @@ def _retrieval_time(value: str) -> datetime:
     raise ValueError("retrieved_at: ожидалось смещение часового пояса")
 
 
-def _event(raw: object) -> tuple[EventKey, datetime, dict[str, object]]:
+def _event(
+    raw: object, houses: HouseCatalog | None
+) -> tuple[EventKey, datetime, dict[str, object]]:
     if not isinstance(raw, dict):
         raise ValueError("ожидался объект")
     if raw.get("kind", "official") != "official":
@@ -74,8 +120,15 @@ def _event(raw: object) -> tuple[EventKey, datetime, dict[str, object]]:
         for field in ("house_id", "district")
         if raw.get(field) is not None
     }
+    if "address" in raw:
+        address = _text(raw["address"], "address")
+        resolved_location = _address_location(address, houses)
+        for field, value in location.items():
+            if value != resolved_location.get(field):
+                raise ValueError(f"{field}: не совпадает с каталогом для address {address!r}")
+        location = resolved_location
     if not location:
-        raise ValueError("требуется house_id или district")
+        raise ValueError("требуется house_id, district или address")
     scope = "house_id" if "house_id" in location else "district"
 
     event_type = _text(raw.get("type"), "type")
@@ -116,18 +169,21 @@ def _event(raw: object) -> tuple[EventKey, datetime, dict[str, object]]:
     return key, timestamp, event
 
 
-def import_snapshot(source: Path, output: Path) -> int:
+def import_snapshot(source: Path, output: Path, *, houses: Path | None = None) -> int:
     """Записывает полный снимок и возвращает число уникальных событий."""
     if source.resolve() == output.resolve():
         raise ValueError("пути снимка и выходного файла должны различаться")
+    if houses is not None and houses.resolve() == output.resolve():
+        raise ValueError("пути каталога домов и выходного файла должны различаться")
     raw = json.loads(source.read_text(encoding="utf-8"))
     if not isinstance(raw, list):
         raise ValueError("ожидался JSON-массив уведомлений")
+    catalog = _load_houses(houses) if houses is not None else None
 
     events: dict[EventKey, tuple[tuple[datetime, str], dict[str, object]]] = {}
     for index, row in enumerate(raw, start=1):
         try:
-            key, timestamp, event = _event(row)
+            key, timestamp, event = _event(row, catalog)
         except ValueError as exc:
             raise ValueError(f"запись {index}: {exc}") from exc
         rank = (timestamp, json.dumps(event, sort_keys=True, ensure_ascii=False))
@@ -146,9 +202,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Импорт локального снимка уведомлений")
     parser.add_argument("snapshot", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--houses", type=Path, help="каталог для точного сопоставления адресов")
     args = parser.parse_args()
     try:
-        count = import_snapshot(args.snapshot, args.output)
+        count = import_snapshot(args.snapshot, args.output, houses=args.houses)
     except (OSError, ValueError) as exc:
         print(f"official: {exc}", file=sys.stderr)
         return 1
