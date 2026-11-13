@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-page: #f6f8fb;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #eef3f8;
+  --color-text: #17212b;
+  --color-text-secondary: #526171;
+  --color-border: #d8e1ea;
+
+  --color-accent: #175cd3;
+  --color-accent-hover: #1849a9;
+  --color-accent-soft: #eff8ff;
+  --color-marker: #38bdf8;
+  --color-marker-selected: #0b4fd6;
+
+  --color-success: #16794c;
+  --color-warning: #b54708;
+  --color-danger: #c4322b;
+  --color-focus: #84adff;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-page);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 50;
+  border-radius: 0.75rem;
+  background: var(--color-accent);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+.house-marker {
+  background: transparent;
+  border: none;
+}
+
+.house-marker span {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 9999px;
+  background: var(--color-marker);
+  box-shadow: 0 1px 5px rgba(15, 23, 42, 0.45);
+}
+
+.house-marker.house-marker-selected span {
+  width: 24px;
+  height: 24px;
+  border-color: #fff;
+  background: var(--color-marker-selected);
+  box-shadow:
+    0 0 0 4px rgba(11, 79, 214, 0.22),
+    0 2px 8px rgba(15, 23, 42, 0.4);
+}
+
+.house-marker-label {
+  border: none;
+  border-radius: 9999px;
+  background: var(--color-text);
+  color: #fff;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.3);
+}
+
+.house-marker-label::before {
+  display: none;
+}
+
+@keyframes dossier-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.loading-pulse {
+  animation: dossier-pulse 1.3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-pulse {
+    animation: none;
+  }
+}
