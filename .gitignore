@@ -23,10 +23,12 @@ coverage/
 
 # Runtime data and local artifacts
 .artifacts/
+.playwright-mcp/
 logs/
 *.log
 *.sqlite
 *.sqlite3
+dataset/output/*.json
 
 # Editors and OS
 .idea/
