@@ -15,7 +15,7 @@ DOCKERFILES = {
     "frontend": ROOT / "frontend" / "Dockerfile",
 }
 NGINX_PATH = ROOT / "frontend" / "nginx.conf"
-MAP_ASSET = ROOT / "frontend" / "public" / "assets" / "map" / "primorsky-krai.png"
+MAP_ASSET = ROOT / "frontend" / "public" / "maps" / "vladivostok-pilot.png"
 
 
 def top_section(name, text=COMPOSE_TEXT):
@@ -194,8 +194,8 @@ def test_nginx_ready_checks_spa_and_required_local_map_asset():
     frontend_healthcheck = service_block("frontend")
 
     assert "try_files" in nginx
-    assert "/assets/map/primorsky-krai.png" in nginx
-    assert "/assets/map/primorsky-krai.png" in frontend_healthcheck
+    assert "/maps/vladivostok-pilot.png" in nginx
+    assert "/maps/vladivostok-pilot.png" in frontend_healthcheck
     assert re.search(r"(?i)(?:return\s+503|proxy_intercept_errors\s+on)", nginx)
 
 
@@ -223,7 +223,7 @@ def test_all_services_write_file_execution_log_in_their_own_mount():
 def test_frontend_map_asset_is_not_optional():
     assert MAP_ASSET.is_file(), (
         "NOT_IMPLEMENTED: required offline frontend asset is missing: "
-        "frontend/public/assets/map/primorsky-krai.png"
+        "frontend/public/maps/vladivostok-pilot.png"
     )
     assert MAP_ASSET.stat().st_size > 0
 
