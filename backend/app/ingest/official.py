@@ -20,19 +20,10 @@ from tempfile import TemporaryDirectory
 from urllib.parse import urlsplit
 from uuid import NAMESPACE_URL, uuid5
 
-EVENT_TYPES = {
-    "hot_water",
-    "accident",
-    "power",
-    "flood",
-    "landslide",
-    "typhoon",
-    "ice",
-    "elevator",
-    "caprepair",
-    "developer",
-    "transport",
-}
+from schemas.events import EventType
+
+# Единственный источник правды — контракт. Копия enum разъезжалась с ним молча.
+EVENT_TYPES = frozenset(member.value for member in EventType)
 
 type EventKey = tuple[str, str, str, str]
 type HouseCatalog = dict[str, list[dict[str, str]]]
