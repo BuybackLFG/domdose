@@ -1,8 +1,11 @@
+import posixpath
 import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
+from packaging.requirements import InvalidRequirement, Requirement
+from packaging.utils import canonicalize_name
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPOSE_PATH = ROOT / "compose.yaml"
@@ -17,6 +20,10 @@ DOCKERFILES = {
 NGINX_PATH = ROOT / "frontend" / "nginx.conf"
 MAP_ASSET = ROOT / "frontend" / "public" / "maps" / "vladivostok-pilot.png"
 MAP_MANIFEST_URL = "/maps/vladivostok-pilot.manifest.json"
+REQUIREMENTS_PATH = ROOT / "requirements.txt"
+CONSTRAINTS_PATH = ROOT / "constraints.txt"
+DOCKERIGNORE_PATH = ROOT / ".dockerignore"
+PYTHON_DOCKERFILES = (DOCKERFILES["api"], DOCKERFILES["scoring"])
 
 
 def top_section(name, text=COMPOSE_TEXT):
@@ -244,3 +251,189 @@ def test_frontend_map_asset_is_not_optional():
 def test_required_container_build_files_exist(path):
     assert path.is_file(), f"FileNotFound: {path.relative_to(ROOT)}"
     assert "FROM " in path.read_text(encoding="utf-8")
+
+
+def requirement_lines(path):
+    """Логические строки pip-файла без комментариев, с учётом переносов."""
+    joined = re.sub(r"\\\r?\n", " ", path.read_text(encoding="utf-8"))
+    lines = []
+    for raw in joined.splitlines():
+        line = re.sub(r"(?:^|\s)#.*$", "", raw).strip()
+        if line:
+            lines.append(line)
+    return lines
+
+
+def required_names(path):
+    """PEP 503-имена требований файла; -r раскрывается, прочие опции пропускаются."""
+    names = set()
+    for line in requirement_lines(path):
+        nested = re.fullmatch(r"(?:-r|--requirement)(?:\s+|=)?(\S+)", line)
+        if nested:
+            names |= required_names(path.parent / nested.group(1))
+        elif not line.startswith("-"):
+            names.add(canonicalize_name(Requirement(line).name))
+    return names
+
+
+def exact_pins(path):
+    """Пины constraints {имя: (версия, строка)}; не-пин — AssertionError."""
+    pins = {}
+    for line in requirement_lines(path):
+        bare = re.sub(r"\s+--hash=sha256:[0-9a-f]{64}", "", line).strip()
+        assert not bare.startswith("-"), f"option is not an exact pin: {line}"
+        try:
+            requirement = Requirement(bare)
+        except InvalidRequirement as exc:
+            raise AssertionError(f"invalid constraint line: {line}") from exc
+        specifiers = list(requirement.specifier)
+        assert requirement.url is None and not requirement.extras, line
+        assert len(specifiers) == 1 and specifiers[0].operator == "==", (
+            f"constraint must be name==version: {line}"
+        )
+        assert "*" not in specifiers[0].version, f"wildcard pin: {line}"
+        name = canonicalize_name(requirement.name)
+        assert name not in pins, f"duplicate constraint: {name}"
+        pins[name] = (specifiers[0].version, line)
+    return pins
+
+
+def dockerfile_instructions(text):
+    """Инструкции Dockerfile (KEYWORD, аргументы) со склеенными переносами."""
+    instructions, current = [], ""
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.endswith("\\"):
+            current += stripped[:-1] + " "
+            continue
+        current += stripped
+        keyword, _, arguments = current.partition(" ")
+        instructions.append((keyword.upper(), arguments.strip()))
+        current = ""
+    return instructions
+
+
+def dockerignore_pattern(pattern):
+    """Регулярное выражение шаблона .dockerignore: *, ?, ** и классы []."""
+    out, index = "", 0
+    while index < len(pattern):
+        char = pattern[index]
+        if pattern.startswith("**/", index):
+            out, index = out + "(?:.*/)?", index + 3
+            continue
+        if pattern.startswith("**", index):
+            out, index = out + ".*", index + 2
+            continue
+        if char == "*":
+            out += "[^/]*"
+        elif char == "?":
+            out += "[^/]"
+        elif char == "[" and "]" in pattern[index + 1 :]:
+            end = pattern.index("]", index + 1)
+            body = pattern[index + 1 : end]
+            if body[:1] in ("!", "^"):
+                body = "^" + body[1:]
+            out += "[" + body + "]"
+            index = end
+        else:
+            out += re.escape(char)
+        index += 1
+    return re.compile(out)
+
+
+def dockerignore_excludes(text, path):
+    """Исключён ли путь контекста: побеждает последний совпавший шаблон.
+
+    Совпадение с родительским каталогом исключает и вложенный путь.
+    """
+    parts = path.split("/")
+    candidates = ["/".join(parts[: depth + 1]) for depth in range(len(parts))]
+    excluded = False
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        negate = line.startswith("!")
+        pattern = line[1:].strip() if negate else line
+        regex = dockerignore_pattern(posixpath.normpath(pattern).lstrip("/"))
+        if any(regex.fullmatch(candidate) for candidate in candidates):
+            excluded = not negate
+    return excluded
+
+
+@pytest.mark.parametrize(
+    ("text", "path", "expected"),
+    [
+        ("*\n!requirements.txt\n", "requirements.txt", False),
+        ("*\n!requirements.txt\n", "constraints.txt", True),
+        ("*\n!*.txt\n", "constraints.txt", False),
+        ("*\n!constraints.txt\n**/*.txt\n", "constraints.txt", True),
+        ("*\n!api/\n**/__pycache__\n", "api/main.py", False),
+        ("*\n!api/\n**/__pycache__\n", "api/__pycache__/main.pyc", True),
+        ("# *\n*.py[cod]\n", "main.pyc", True),
+    ],
+)
+def test_dockerignore_evaluator_uses_last_matching_pattern(text, path, expected):
+    assert dockerignore_excludes(text, path) is expected
+
+
+def test_constraints_pin_every_runtime_requirement_exactly():
+    assert CONSTRAINTS_PATH.is_file(), "FileNotFound: constraints.txt"
+    pins = exact_pins(CONSTRAINTS_PATH)
+    required = required_names(REQUIREMENTS_PATH)
+
+    assert required, "requirements.txt declares no packages"
+    assert sorted(required - set(pins)) == [], "requirements without exact pin"
+    for line in requirement_lines(REQUIREMENTS_PATH):
+        if line.startswith("-"):
+            continue
+        requirement = Requirement(line)
+        version, pin = pins[canonicalize_name(requirement.name)]
+        assert requirement.specifier.contains(version, prereleases=True), (
+            f"{pin} violates requirements.txt range {line}"
+        )
+
+
+PIP_INSTALL = re.compile(r"\bpip3?\s+install\b")
+REQUIREMENTS_FLAG = re.compile(
+    r"(?:^|\s)(?:-r|--requirement)(?:\s+|=)?(?:\./)?requirements\.txt(?=\s|$)"
+)
+CONSTRAINTS_FLAG = re.compile(
+    r"(?:^|\s)(?:-c|--constraint)(?:\s+|=)?(?:\./)?constraints\.txt(?=\s|$)"
+)
+
+
+@pytest.mark.parametrize("path", PYTHON_DOCKERFILES, ids=lambda path: path.name)
+def test_python_images_install_requirements_under_constraints(path):
+    instructions = dockerfile_instructions(read_required(path))
+    pip_runs = [
+        index
+        for index, (keyword, arguments) in enumerate(instructions)
+        if keyword == "RUN" and PIP_INSTALL.search(arguments)
+    ]
+    assert pip_runs, f"{path.name}: no pip install"
+    copied = [
+        arguments.split()
+        for keyword, arguments in instructions[: pip_runs[0]]
+        if keyword == "COPY"
+    ]
+    assert any("constraints.txt" in tokens for tokens in copied), (
+        f"{path.name}: constraints.txt is not copied before pip install"
+    )
+    installs = [
+        command
+        for index in pip_runs
+        for command in re.split(r"&&|\|\||;", instructions[index][1])
+        if PIP_INSTALL.search(command)
+    ]
+    assert all(CONSTRAINTS_FLAG.search(command) for command in installs), installs
+    assert any(REQUIREMENTS_FLAG.search(command) for command in installs), installs
+
+
+def test_dockerignore_keeps_requirements_and_constraints_in_context():
+    text = read_required(DOCKERIGNORE_PATH)
+
+    for name in ("requirements.txt", "constraints.txt"):
+        assert not dockerignore_excludes(text, name), f".dockerignore excludes {name}"

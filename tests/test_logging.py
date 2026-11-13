@@ -447,3 +447,64 @@ def test_utility_rating_has_no_logging_or_print():
                 assert node.module not in {"logging", "core.logging"}, path
             elif isinstance(node, ast.Call):
                 assert not (isinstance(node.func, ast.Name) and node.func.id == "print"), path
+
+
+PRINT_GUARDED_ZONES = (
+    "api",
+    "contract",
+    "core",
+    "dossier",
+    "sources",
+    "utility_rating",
+    "map-preparation",
+)
+_SKIPPED_PATH_PARTS = frozenset({"__pycache__", "node_modules", "site-packages", "venv"})
+
+
+def guarded_python_files(zone: str) -> list[Path]:
+    """Python-модули зоны без окружений, кэшей и скрытых каталогов."""
+    root = REPO_ROOT / zone
+    return sorted(
+        path
+        for path in root.rglob("*.py")
+        if not any(
+            part.startswith(".") or part in _SKIPPED_PATH_PARTS
+            for part in path.relative_to(root).parts[:-1]
+        )
+    )
+
+
+def print_reference_lines(tree: ast.Module) -> list[int]:
+    """Строки обращений к встроенному print: имя print или builtins.print."""
+    lines = []
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Name)
+            and node.id == "print"
+            and isinstance(node.ctx, ast.Load)
+        ):
+            lines.append(node.lineno)
+        elif (
+            isinstance(node, ast.Attribute)
+            and node.attr == "print"
+            and isinstance(node.value, ast.Name)
+            and node.value.id == "builtins"
+        ):
+            lines.append(node.lineno)
+    return lines
+
+
+def test_runtime_and_map_modules_emit_events_instead_of_print():
+    """Ловит print вместо события core.logging вне utility_rating тоже."""
+    offenders = []
+    for zone in PRINT_GUARDED_ZONES:
+        files = guarded_python_files(zone)
+        assert files, f"no Python modules found in {zone}"
+        for path in files:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            offenders.extend(
+                f"{path.relative_to(REPO_ROOT).as_posix()}:{line}"
+                for line in print_reference_lines(tree)
+            )
+
+    assert offenders == [], "print instead of events: " + ", ".join(offenders)
