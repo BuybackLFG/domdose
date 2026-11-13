@@ -11,6 +11,7 @@ MVP для вайботона: досье на дом из открытых да
 
 ```
 backend/            FastAPI + Python 3.12 (uv)
+  schemas/          контракт API (Pydantic v2), меняет только техлид
   app/api/          эндпоинты (роутеры)
   app/core/         конфиг
   app/ingest/       загрузка данных и seed
@@ -20,6 +21,7 @@ frontend/           Vite + React 19 + TS + Tailwind 4
   src/types/api.ts  генерируется из OpenAPI, руками не править
 data/seed/          JSON для наполнения локальной БД
 scripts/            check.sh, gen_api_types.sh, check_api_types.sh
+docs/api-contract.md  DOC-2: эндпоинты, модели, правило заморозки
 .github/workflows/  ci.yml — лежит готовым, включится после первого пуша
 AGENTS.md           правила работы агентов, владельцы, команды
 ```

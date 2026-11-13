@@ -1,13 +1,10 @@
 """Служебные эндпоинты."""
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+
+from schemas.service import HealthResponse
 
 router = APIRouter(tags=["service"])
-
-
-class HealthResponse(BaseModel):
-    status: str
 
 
 @router.get("/health", response_model=HealthResponse)
