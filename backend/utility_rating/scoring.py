@@ -36,7 +36,7 @@ _ZERO_BUCKET = (0.0, 0.0, 0.0)
 
 
 def score_city(dataset: UtilityDataset) -> CityRating:
-    """Оценить все дома города по окну датасета."""
+    """Оценить все дома переданной выборки по окну датасета."""
     if not isinstance(dataset, UtilityDataset):
         raise TypeError("dataset must be UtilityDataset")
     houses = _validated_houses(dataset)

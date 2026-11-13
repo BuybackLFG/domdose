@@ -89,6 +89,6 @@ class HouseRating:
 
 @dataclass(frozen=True)
 class CityRating:
-    """Результат расчёта города по ключу house_id."""
+    """Результат расчёта набора домов по ключу house_id."""
 
     ratings: Mapping[str, HouseRating]
