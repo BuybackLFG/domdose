@@ -1,13 +1,13 @@
 name: CI
 
-# Локальный режим: remote не настроен, этот воркфлоу ещё не запускался.
-# Активируется автоматически, как только репозиторий получит remote и первый push.
-
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -64,3 +64,34 @@ jobs:
       - run: (cd frontend && npm ci)
       - name: Проверить актуальность TS-типов
         run: ./scripts/check_api_types.sh
+
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COMPOSE_PROJECT_NAME: domdose-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      DOMAIN: http://localhost
+    steps:
+      - uses: actions/checkout@v4
+      - name: Собрать и запустить production-стек
+        run: docker compose -f docker-compose.prod.yml up -d --build --wait --wait-timeout 120
+      - name: Проверить frontend и backend через прокси
+        run: |
+          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://localhost/ -o /tmp/domdose-index.html
+          grep -qi '<!doctype html>' /tmp/domdose-index.html
+          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://localhost/api/health | python3 -c 'import json, sys; assert json.load(sys.stdin) == {"status": "ok"}'
+          # /api/health живёт вне префикса и проходит даже при срезанном префиксе.
+          # Поэтому отдельно проверяем реальный эндпоинт под /api: 501 значит, что
+          # запрос дошёл до роутера, 404 — что nginx сломал путь.
+          status=$(curl -s -o /tmp/domdose-houses.json -w '%{http_code}' --retry 10 --retry-connrefused --retry-delay 1 http://localhost/api/houses)
+          echo "GET /api/houses -> $status"
+          if [ "$status" != "200" ] && [ "$status" != "501" ]; then
+            echo "путь /api/* не дошёл до backend (status $status)" >&2
+            exit 1
+          fi
+      - name: Логи при ошибке
+        if: failure()
+        run: docker compose -f docker-compose.prod.yml logs --no-color
+      - name: Удалить тестовый стек
+        if: always()
+        run: docker compose -f docker-compose.prod.yml down --volumes --remove-orphans
