@@ -1,6 +1,7 @@
 """Независимый контракт централизованного логирования и run-артефактов."""
 
 import ast
+import importlib
 import json
 import logging
 import math
@@ -211,11 +212,35 @@ def test_lazy_auto_setup_repeats_unwritable_path_failure(tmp_path, monkeypatch):
             logger.info("API_APP_CREATED", "created")
 
 
-def test_create_app_fails_fast_on_invalid_logging_config(tmp_path, monkeypatch):
+def test_create_app_fails_fast_on_startup_with_invalid_logging_config(
+    tmp_path, monkeypatch
+):
     monkeypatch.setenv("DOMDOSSE_LOG_LEVEL", "INVALID")
+    application = api_cases.create_app(api_settings(tmp_path))
 
     with pytest.raises((ValueError, RuntimeError)):
-        api_cases.create_app(api_settings(tmp_path))
+        with TestClient(application):
+            pass
+
+
+def test_api_main_import_and_reimport_do_not_write_before_lifespan_startup(
+    tmp_path, monkeypatch
+):
+    log_path = tmp_path / "logs" / "api" / "execution.log"
+    monkeypatch.setenv("DOMDOSSE_LOG_FILE_PATH", str(log_path))
+    monkeypatch.setenv("DOMDOSSE_LOG_LEVEL", "INFO")
+    monkeypatch.delitem(sys.modules, "api.main")
+
+    module = importlib.import_module("api.main")
+    assert not log_path.exists(), "api.main import wrote execution.log"
+    module = importlib.reload(module)
+    assert not log_path.exists(), "api.main reload wrote execution.log"
+
+    application = module.create_app(api_settings(tmp_path))
+    assert not log_path.exists(), "create_app wrote execution.log before startup"
+    with TestClient(application):
+        assert log_path.is_file(), "lifespan startup did not create execution.log"
+        assert event(log_path, "API_APP_CREATED")["service"] == "api"
 
 
 def test_legacy_main_fails_fast_on_invalid_logging_config(tmp_path, monkeypatch):
