@@ -1,5 +1,5 @@
 /** Типизированный клиент API. Все запросы к backend идут только отсюда. */
-import type { ErrorResponse, HouseList } from '../types'
+import type { Dossier, ErrorResponse, HouseList } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 /** Пока backend отвечает 501, фронтенд можно гонять на фикстурах. */
@@ -53,4 +53,27 @@ export async function searchHouses(
     return mockSearchHouses(query, signal)
   }
   return request<HouseList>(`/api/houses?q=${encodeURIComponent(query)}`, signal)
+}
+
+/** Текст 404 досье — дословно из контракта (`schemas/errors.py`). */
+const HOUSE_NOT_FOUND = 'house not found'
+
+/**
+ * `GET /api/houses/{id}` — досье дома (B2).
+ *
+ * Неизвестный id — это `ApiError` со `status === 404`, а не `null`: вызывающий
+ * код обязан отличать «дома нет» от «запрос не дошёл».
+ */
+export async function getHouseDossier(
+  id: string,
+  signal: AbortSignal | null = null,
+): Promise<Dossier> {
+  if (USE_MOCKS) {
+    const { mockHouseDossier } = await import('../mocks/dossier')
+    return mockHouseDossier(id, signal).then((dossier) => {
+      if (!dossier) throw new ApiError(404, HOUSE_NOT_FOUND)
+      return dossier
+    })
+  }
+  return request<Dossier>(`/api/houses/${encodeURIComponent(id)}`, signal)
 }
