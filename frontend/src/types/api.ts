@@ -1,4 +1,4 @@
-// Сгенерировано из http://127.0.0.1:8000/openapi.json — не править руками.
+// Сгенерировано из OpenAPI backend — не править руками.
 // Обновление: ./scripts/gen_api_types.sh
 
 /**
@@ -24,14 +24,598 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/houses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Поиск домов по адресу или району
+         * @description Реализация — задача B1 (`app/core/search.py`).
+         */
+        get: operations["list_houses_api_houses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/houses/{house_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Досье дома: паспорт, индекс, факты, события, чек-лист
+         * @description Реализация — задача B2 (`app/core/dossier.py`).
+         */
+        get: operations["get_dossier_api_houses__house_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Сравнить два дома по пяти компонентам индекса
+         * @description Реализация — задача F5 (`app/core/compare.py`).
+         *
+         *     Проверка «ровно два id» живёт в роуте, а не в схеме: пользователю нужен 400
+         *     с понятным текстом, а не 422 из валидатора Pydantic.
+         */
+        get: operations["compare_houses_api_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отправить сообщение жильца и пересчитать индекс
+         * @description Реализация — задача W1 (`app/core/reports.py`, вызов scoring).
+         *
+         *     `payload` принимается и валидируется уже сейчас: форма запроса — часть
+         *     контракта, даже пока бизнес-логики нет. Невалидный запрос получит 422
+         *     до того, как дойдёт до этой строки.
+         */
+        post: operations["create_report_api_reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** HealthResponse */
+        /**
+         * ChecklistItem
+         * @description Вопрос продавцу, выведенный из конкретного факта или события дома.
+         *
+         *     `reason` обязателен и должен ссылаться на событие или факт: общие вопросы
+         *     вроде «узнайте всё» контрактом не предусмотрены.
+         */
+        ChecklistItem: {
+            /** Id */
+            id: string;
+            /**
+             * Question
+             * @description Вопрос на русском
+             */
+            question: string;
+            /**
+             * Reason
+             * @description Почему вопрос возник: факт или событие дома
+             */
+            reason: string;
+            /**
+             * Source Event Ids
+             * @description id событий, из которых выведен вопрос
+             */
+            source_event_ids?: string[];
+        };
+        /**
+         * CompareResponse
+         * @description Два дома бок о бок и честный вывод, где каждый слабее.
+         *
+         *     Контракт запрещает «победителя без объяснения»: `summary` обязателен, а
+         *     `weaker_house_id` указывает на дом с более слабым местом, а не на проигравшего.
+         */
+        CompareResponse: {
+            /** Houses */
+            houses: components["schemas"]["Dossier"][];
+            /**
+             * Weaker House Id
+             * @description id дома, у которого есть заметное слабое место в сравнении
+             */
+            weaker_house_id: string;
+            /**
+             * Summary
+             * @description Человеческое объяснение сравнения: что лучше, что хуже и почему
+             */
+            summary: string;
+        };
+        /**
+         * Component
+         * @description Одна компонента индекса вместе с объяснением и источниками.
+         *
+         *     Объяснение обязательно: жюри и пользователь должны видеть, из чего
+         *     сложилась оценка, а не только число.
+         */
+        Component: {
+            key: components["schemas"]["ComponentKey"];
+            /**
+             * Label
+             * @description Название для человека
+             */
+            label: string;
+            /**
+             * Score
+             * @description Оценка 0–100, больше — лучше
+             */
+            score: number;
+            /**
+             * Weight
+             * @description Доля в итоговом индексе
+             */
+            weight: number;
+            /**
+             * Explanation
+             * @description Из чего сложилась оценка, человеческим языком
+             */
+            explanation: string;
+            /**
+             * Source Urls
+             * @description Источники, на которых основана компонента
+             */
+            source_urls?: string[];
+        };
+        /**
+         * ComponentBrief
+         * @description Короткая проекция компоненты индекса для списка в поиске.
+         */
+        ComponentBrief: {
+            /**
+             * Key
+             * @description Машинный ключ компоненты
+             */
+            key: string;
+            /**
+             * Label
+             * @description Название для человека
+             */
+            label: string;
+            /**
+             * Score
+             * @description Оценка 0–100, больше — лучше
+             */
+            score: number;
+        };
+        /**
+         * ComponentKey
+         * @description Пять компонент индекса. Порядок и вес задаёт B3, контракт фиксирует набор.
+         * @enum {string}
+         */
+        ComponentKey: "communications" | "nature" | "building" | "transport" | "safety";
+        /**
+         * Dossier
+         * @description Полное досье: паспорт, индекс, факты, лента событий, чек-лист, источники.
+         *
+         *     Это главный ответ продукта. Собирается в `app/core/dossier.py`, контракт
+         *     принадлежит `schemas/` и меняется только техлидом.
+         */
+        Dossier: {
+            house: components["schemas"]["House"];
+            /** @description null, если индекс ещё не посчитан: досье без индекса валидно */
+            index?: components["schemas"]["HouseIndex"] | null;
+            /** Facts */
+            facts?: components["schemas"]["Fact"][];
+            /** Events */
+            events?: components["schemas"]["Event"][];
+            /** Checklist */
+            checklist?: components["schemas"]["ChecklistItem"][];
+            /** Sources */
+            sources?: components["schemas"]["Source"][];
+            /**
+             * Disclaimer
+             * @description Дисклеймер, показывается пользователю дословно
+             * @default аналитика по открытым данным, не гарантия
+             */
+            disclaimer: string;
+        };
+        /**
+         * ErrorResponse
+         * @description Ошибка с человекочитаемым `detail`. Код ошибки — в HTTP-статусе.
+         */
+        ErrorResponse: {
+            /**
+             * Detail
+             * @description Что пошло не так, пригодно для показа пользователю
+             */
+            detail: string;
+        };
+        /**
+         * Event
+         * @description Событие в ленте дома.
+         *
+         *     `id` нужен как ключ в UI и для `ChecklistItem.source_event_ids`.
+         *     Привязано либо к дому, либо к району (события без конкретного адреса).
+         */
+        Event: {
+            /**
+             * Id
+             * @description Стабильный идентификатор события
+             */
+            id: string;
+            /**
+             * House Id
+             * @description slug дома из houses.json
+             */
+            house_id?: string | null;
+            /**
+             * District
+             * @description Район, если событие не про дом
+             */
+            district?: string | null;
+            type: components["schemas"]["EventType"];
+            /**
+             * Date
+             * Format: date
+             * @description Дата события, ISO
+             */
+            date: string;
+            /**
+             * Severity
+             * @description Серьёзность: 1 низкая, 3 критичная
+             */
+            severity: number;
+            /** Title */
+            title: string;
+            /** Summary */
+            summary?: string | null;
+            /**
+             * Source Url
+             * @description Ссылка на открытый источник (http/https)
+             */
+            source_url: string;
+            /**
+             * Confidence
+             * @description Уверенность в событии, 0–1
+             * @default 1
+             */
+            confidence: number;
+            /** @default official */
+            kind: components["schemas"]["EventKind"];
+        };
+        /**
+         * EventKind
+         * @description Происхождение события.
+         *
+         *     official — официальный источник, confidence = 1.0;
+         *     ai — извлечено LLM из новостей, в индекс идёт только при confidence >= 0.8;
+         *     resident — сообщение жильца через live-краудсорсинг.
+         * @enum {string}
+         */
+        EventKind: "official" | "ai" | "resident";
+        /**
+         * EventType
+         * @description Тип события. Значения зафиксированы: их видят и data-owner, и фронтенд.
+         * @enum {string}
+         */
+        EventType: "hot_water" | "accident" | "power" | "flood" | "landslide" | "typhoon" | "ice" | "elevator" | "caprepair" | "developer" | "transport";
+        /**
+         * Fact
+         * @description Утверждение о доме, которое можно проверить по ссылке.
+         *
+         *     У каждого факта обязателен `source_url` — это требование эпика B, без него
+         *     досье превращается в непроверяемые утверждения.
+         */
+        Fact: {
+            /** Id */
+            id: string;
+            type: components["schemas"]["FactType"];
+            /**
+             * Label
+             * @description Короткая подпись факта
+             */
+            label: string;
+            /**
+             * Value
+             * @description Значение как текст
+             */
+            value: string;
+            /**
+             * Source Url
+             * @description Ссылка на открытый источник (http/https)
+             */
+            source_url: string;
+            /**
+             * Retrieved At
+             * Format: date
+             */
+            retrieved_at: string;
+            /**
+             * Confidence
+             * @description Уверенность в событии, 0–1
+             * @default 1
+             */
+            confidence: number;
+        };
+        /**
+         * FactType
+         * @description Категория факта. Совпадает по смыслу с компонентами индекса.
+         * @enum {string}
+         */
+        FactType: "building" | "communications" | "nature" | "transport" | "safety" | "legal";
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HealthResponse
+         * @description Ответ `/health`. `ok` — единственное валидное состояние на демо.
+         */
         HealthResponse: {
-            /** Status */
-            status: string;
+            /**
+             * Status
+             * @description ok, если сервис жив
+             * @constant
+             */
+            status: "ok";
+        };
+        /**
+         * House
+         * @description Паспорт дома. Поля 1:1 совпадают с `data/seed/houses.json` (задача D2).
+         *
+         *     Неизвестное значение — `null`, а не 0 и не догадка: индекс и UI обязаны
+         *     отличать «нет данных» от «данные плохие».
+         */
+        House: {
+            /**
+             * Id
+             * @description Стабильный slug, не меняется
+             */
+            id: string;
+            /** Address */
+            address: string;
+            /** District */
+            district: string;
+            /** Lat */
+            lat?: number | null;
+            /** Lon */
+            lon?: number | null;
+            /**
+             * Year
+             * @description Год постройки
+             */
+            year?: number | null;
+            /** Floors */
+            floors?: number | null;
+            /** Material */
+            material?: string | null;
+            /**
+             * Wear Pct
+             * @description Износ по ГИС ЖКХ, %
+             */
+            wear_pct?: number | null;
+            /**
+             * Uk
+             * @description Управляющая компания
+             */
+            uk?: string | null;
+            /**
+             * Avariy
+             * @description Аварийный дом по реестру
+             */
+            avariy: boolean;
+            /**
+             * Caprepair
+             * @description В плане капремонта
+             */
+            caprepair: boolean;
+            /** Developer */
+            developer?: string | null;
+            /**
+             * Source Urls
+             * @description Хотя бы один источник
+             */
+            source_urls: string[];
+            /**
+             * Retrieved At
+             * Format: date-time
+             * @description Когда данные получены, ISO 8601
+             */
+            retrieved_at: string;
+        };
+        /**
+         * HouseIndex
+         * @description Объяснимый индекс дома.
+         *
+         *     `coverage` — множитель того, насколько данные полны. Он не прячется внутри
+         *     компонент, а отдаётся наружу, чтобы UI мог честно сказать «данных мало».
+         */
+        HouseIndex: {
+            /**
+             * Total
+             * @description Итоговый индекс 0–100
+             */
+            total: number;
+            /** Components */
+            components: components["schemas"]["Component"][];
+            /**
+             * Coverage
+             * @description Множитель покрытия источников, 0–1
+             */
+            coverage: number;
+            /**
+             * Coverage Note
+             * @description Чего не хватает данным, если coverage < 1
+             */
+            coverage_note?: string | null;
+            /**
+             * Computed At
+             * Format: date-time
+             * @description Когда индекс посчитан, ISO 8601
+             */
+            computed_at: string;
+        };
+        /**
+         * HouseList
+         * @description Ответ поиска. Обёртка вместо голого массива: место для пагинации и счётчика.
+         */
+        HouseList: {
+            /** Items */
+            items: components["schemas"]["HouseSummary"][];
+            /** Total */
+            total: number;
+            /**
+             * Query
+             * @description Что реально искали, после нормализации
+             */
+            query: string;
+            /**
+             * Retrieved At
+             * @description Дата заморозки seed
+             */
+            retrieved_at?: string | null;
+        };
+        /**
+         * HouseSummary
+         * @description Элемент списка `GET /api/houses?q=` (задача B1).
+         *
+         *     `index` и `components` приходят `null`/пустыми, пока индекс не посчитан:
+         *     поиск не должен падать из-за отсутствия скоринга.
+         */
+        HouseSummary: {
+            /** Id */
+            id: string;
+            /** Address */
+            address: string;
+            /** District */
+            district: string;
+            /**
+             * Index
+             * @description Итоговый индекс, если посчитан
+             */
+            index?: number | null;
+            /** Components */
+            components?: components["schemas"]["ComponentBrief"][];
+        };
+        /**
+         * IndexChange
+         * @description Изменение индекса после репорта, с указанием просевшей компоненты.
+         *
+         *     Без `component` и `explanation` «индекс упал» неотличим от бага, поэтому
+         *     оба поля обязательны.
+         */
+        IndexChange: {
+            /** @description Компонента, на которую повлиял репорт */
+            component: components["schemas"]["ComponentKey"];
+            /**
+             * Explanation
+             * @description Почему индекс изменился именно так
+             */
+            explanation: string;
+        };
+        /**
+         * ReportCreate
+         * @description Запрос жильца о проблеме дома.
+         *
+         *     `anonymous` по умолчанию `true`: контракт не предполагает хранения имени,
+         *     телефона и любых других персональных данных, в том числе в `text`.
+         */
+        ReportCreate: {
+            /** House Id */
+            house_id: string;
+            type: components["schemas"]["EventType"];
+            /**
+             * Text
+             * @description Что случилось, словами жильца
+             */
+            text: string;
+            /**
+             * Date
+             * @description Когда случилось; по умолчанию сегодня
+             */
+            date?: string | null;
+            /**
+             * Anonymous
+             * @description Репорт всегда анонимный на демо
+             * @default true
+             */
+            anonymous: boolean;
+        };
+        /**
+         * ReportResult
+         * @description Ответ на репорт: созданное событие и индекс до и после пересчёта.
+         */
+        ReportResult: {
+            /** @description Созданное событие, kind = resident */
+            event: components["schemas"]["Event"];
+            /** Index Before */
+            index_before: number;
+            /** Index After */
+            index_after: number;
+            change: components["schemas"]["IndexChange"];
+        };
+        /**
+         * Source
+         * @description Источник в подвале досье: реестр, на котором построены факты.
+         */
+        Source: {
+            /** Name */
+            name: string;
+            /**
+             * Url
+             * @description Ссылка на открытый источник (http/https)
+             */
+            url: string;
+            /**
+             * Retrieved At
+             * Format: date
+             */
+            retrieved_at: string;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
     };
     responses: never;
@@ -58,6 +642,188 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+            /** @description Внутренняя ошибка */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_houses_api_houses_get: {
+        parameters: {
+            query?: {
+                /** @description Подстрока адреса или района */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Внутренняя ошибка */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_dossier_api_houses__house_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                house_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Dossier"];
+                };
+            };
+            /** @description house not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Внутренняя ошибка */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    compare_houses_api_compare_get: {
+        parameters: {
+            query: {
+                /** @description Ровно два id через запятую: ids=rus-65,patrokl-12 */
+                ids: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompareResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Внутренняя ошибка */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_report_api_reports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Внутренняя ошибка */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
