@@ -31,6 +31,8 @@ logs/
 dataset/*.json
 !dataset/utility-rating-dataset.schema.json
 dataset/output/*.json
+# Утверждённый владельцем MVP-набор отслеживается; прочие выгрузки — нет.
+!dataset/output/utility-rating.json
 /output/
 
 # Map preparation inputs and intermediates
