@@ -1,26 +1,22 @@
-ARG NODE_IMAGE
-FROM ${NODE_IMAGE} AS build
+# SPA: сборка Vite на Node 24 (lockfile создан npm 11) и отдача статикой через nginx.
+# Контекст сборки — каталог frontend; карта берётся из public/maps и попадает в dist.
+FROM node:24.22.3-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS build
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 COPY . .
 RUN npm run build
 
-ARG NGINX_IMAGE
-FROM ${NGINX_IMAGE} AS runtime
+FROM nginx:1.30.6-alpine@sha256:901e593c95dc85f5a729f5765516321366ef4ac401821431d408897e95287d0a AS runtime
 
-COPY --from=build /app/dist /usr/share/nginx/html
+# Файловый журнал /var/log/domdossier/execution.log открывает master-процесс (root);
+# каталог монтируется named volume frontend_logs и вне root документов.
+RUN mkdir -p /var/log/domdossier
+
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY security-headers.conf /etc/nginx/security-headers.conf
-
-RUN mkdir -p /logs && chown -R nginx:nginx /logs
+COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -qO- http://127.0.0.1/ready >/dev/null 2>&1 || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]

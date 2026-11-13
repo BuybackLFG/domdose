@@ -1,0 +1,33 @@
+# Контекст сборки api и scoring — корень репозитория. Разрешено только то, что
+# копируют api/Dockerfile и api/scoring.Dockerfile; остальное в контекст не попадает.
+*
+!requirements.txt
+!api/
+!contract/
+!core/
+!dossier/
+!sources/
+!utility_rating/
+!dataset/utility-rating-dataset.schema.json
+
+# Явные исключения: реальные данные, секреты, окружения, логи и чужие зоны.
+.git
+.venv
+venv
+node_modules
+frontend
+tests
+map-preparation
+dataset/output
+output
+.artifacts
+logs
+**/.env
+**/.env.*
+**/*.log
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/Dockerfile
+**/*.Dockerfile
