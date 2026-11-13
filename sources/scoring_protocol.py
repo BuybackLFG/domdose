@@ -46,11 +46,6 @@ def canonical_snapshot_id(dataset: dict, schema: dict) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def error_body(code: str, message: str) -> dict:
-    """Тело ошибки internal scoring в едином формате."""
-    return {"error": {"code": code, "message": message}}
-
-
 class _Wire(BaseModel):
     """Строгая неизменяемая модель без лишних полей."""
 

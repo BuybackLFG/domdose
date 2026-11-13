@@ -3,7 +3,6 @@
 import threading
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime
 
 from contract.utility_rating import (
     CityRating,
@@ -13,7 +12,8 @@ from contract.utility_rating import (
     ScoringUnavailable,
     SourcedEvent,
     TimeWindow,
-    UtilityCategory,
+    category_rank,
+    ended_rank,
 )
 from core.config import Settings
 from core.logging import get_logger
@@ -24,8 +24,6 @@ from sources.utility_rating_json import (
 )
 
 _logger = get_logger("dossier.service", service="api")
-
-_CATEGORY_ORDER = {category: index for index, category in enumerate(UtilityCategory)}
 
 
 class DatasetUnavailable(Exception):
@@ -55,18 +53,13 @@ class HouseDossier:
     events: tuple[SourcedEvent, ...]
 
 
-def _ended_key(ended: datetime | None) -> tuple[int, datetime | None]:
-    """Ключ сортировки: известные окончания раньше продолжающихся."""
-    return (1, None) if ended is None else (0, ended)
-
-
 def _display_order(events: Iterable[SourcedEvent]) -> tuple[SourcedEvent, ...]:
     """Начало по убыванию, затем категория, окончание и source_url по возрастанию."""
     ordered = sorted(
         events,
         key=lambda item: (
-            _CATEGORY_ORDER[item.event.category],
-            _ended_key(item.event.ended_at),
+            category_rank(item.event.category),
+            ended_rank(item.event.ended_at),
             item.source_url,
         ),
     )
@@ -87,7 +80,8 @@ def _log_load_failed(reason: str, exc: BaseException) -> None:
 class UtilityRatingService:
     """Лениво загружает датасет и кэширует только полный успешный снимок.
 
-    scoring_client None — клиент internal scoring из Settings.scoring_url.
+    scoring_client None — клиент internal scoring из Settings.scoring_url,
+    которым владеет сервис; переданный снаружи клиент закрывает вызывающий.
     """
 
     def __init__(
@@ -95,6 +89,7 @@ class UtilityRatingService:
     ) -> None:
         self._settings = settings
         self._scoring_client = scoring_client
+        self._owns_client = scoring_client is None
         self._lock = threading.Lock()
         self._snapshot: UtilityRatingSnapshot | None = None
 
@@ -103,6 +98,13 @@ class UtilityRatingService:
         if self._scoring_client is None:
             self._scoring_client = ScoringClient(base_url=self._settings.scoring_url)
         return self._scoring_client
+
+    def close(self) -> None:
+        """Закрыть клиент scoring, созданный сервисом; внешний клиент не трогать."""
+        with self._lock:
+            if self._owns_client and self._scoring_client is not None:
+                self._scoring_client.close()
+                self._scoring_client = None
 
     def load_snapshot(self) -> UtilityRatingSnapshot:
         """Вернуть снимок, при необходимости загрузив и рассчитав данные.

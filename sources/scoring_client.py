@@ -158,11 +158,20 @@ def _failure(
 def _rejection(
     logger: EventLogger, operation: str, response: httpx.Response
 ) -> Exception:
-    """Отказ 422: DatasetRejected с кодом scoring или нарушение протокола."""
+    """Отказ 422: DatasetRejected с кодом scoring или нарушение протокола.
+
+    Отклонённый набор — WARNING SCORING_DATASET_REJECTED, не сбой вызова.
+    """
     try:
         detail = ErrorResponse.model_validate_json(response.content).error
         code = DatasetRejectionCode(detail.code)
     except (ValidationError, ValueError):
         return _failure(logger, operation, "invalid_response", response.status_code)
-    _log_failure(logger, operation, "http_status", response.status_code)
+    logger.warning(
+        "SCORING_DATASET_REJECTED",
+        "scoring rejected dataset",
+        operation=operation,
+        status=response.status_code,
+        code=code.value,
+    )
     return DatasetRejected(code, detail.message)

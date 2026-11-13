@@ -15,7 +15,11 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from contract.utility_rating import ScoringUnavailable
+from contract.utility_rating import (
+    ScoringUnavailable,
+    UtilityCategory,
+    canonical_event_key,
+)
 from core.config import load_scoring_url
 from core.logging import ServiceName, get_logger, load_logging_settings, setup_logging
 from sources.scoring_client import ScoringClient
@@ -24,12 +28,7 @@ _logger = get_logger("sources.legacy_dataset", service="legacy")
 
 _TZ = timezone(timedelta(hours=10))
 _SCHEMA_NAME = "utility-rating-dataset.schema.json"
-_CATEGORY_ORDER = {
-    "hot_water": 0,
-    "cold_water": 1,
-    "electricity": 2,
-    "heating": 3,
-}
+_CATEGORY_NAMES = tuple(category.value for category in UtilityCategory)
 # обозначения улиц и домов, удаляемые при нормализации адреса
 _STREET_WORDS = frozenset(
     {
@@ -194,17 +193,13 @@ def build_dataset(
                     existing["source_url"] = source_url
                     existing["_vl_id"] = vl_id
 
-    def _ended_key(event: dict) -> tuple:
-        ended = event["ended_at"]
-        return (1, None) if ended is None else (0, ended)
-
     ordered = sorted(
         merged.values(),
-        key=lambda event: (
+        key=lambda event: canonical_event_key(
             event["house_id"],
-            _CATEGORY_ORDER[event["category"]],
+            event["category"],
             event["started_at"],
-            _ended_key(event),
+            event["ended_at"],
             event["source_url"],
         ),
     )
@@ -231,7 +226,7 @@ def build_dataset(
         "registry_source_url": current_draft["registry_source_url"],
         "registry_complete": True,
         "houses": houses,
-        "coverage": {name: "complete" for name in _CATEGORY_ORDER},
+        "coverage": {name: "complete" for name in _CATEGORY_NAMES},
         "events": events,
     }
 
@@ -266,7 +261,7 @@ def _log_rating_summary(
     scoring. Оба отказа прерывают адаптацию до записи output.
     """
     rating = scoring_client.score_city(dataset, schema, service=ServiceName.LEGACY)
-    counts = {name: 0 for name in _CATEGORY_ORDER}
+    counts = {name: 0 for name in _CATEGORY_NAMES}
     affected: set[str] = set()
     for event in dataset["events"]:
         counts[event["category"]] += 1

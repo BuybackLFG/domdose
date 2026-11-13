@@ -7,6 +7,16 @@
 
 ## Командa воспроизведения
 
+Адаптер проверяет набор через запущенный internal scoring по
+`DOMDOSSE_SCORING_URL` (по умолчанию `http://127.0.0.1:8001`). Сначала запустить
+scoring в отдельном терминале из корня репозитория:
+
+```powershell
+.venv\Scripts\python.exe -m uvicorn api.scoring_main:app --port 8001
+```
+
+Затем:
+
 ```powershell
 .venv\Scripts\python.exe -m sources.legacy_dataset `
   --legacy dataset\legacy\events_parsed.json `
@@ -15,9 +25,10 @@
 ```
 
 Существующий output без `--force` не перезаписывается. Перед атомарной записью
-(временный файл + replace) собранный датасет обязательно проходит
-`parse_dataset` (опубликованная схема) → `score_city`; при ошибке прежний output
-сохраняется даже с `--force`.
+(временный файл + replace) собранный датасет обязательно проходит операцию
+`score_city` internal scoring (внутри — `parse_dataset` по опубликованной схеме и
+расчёт); при отказе набора или недоступном scoring прежний output сохраняется даже
+с `--force`.
 
 ## Что перенесено
 

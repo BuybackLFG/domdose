@@ -30,10 +30,11 @@ from sources.scoring_protocol import (
     PARSE_DATASET_PATH,
     SCORE_CITY_PATH,
     Envelope,
+    ErrorDetail,
+    ErrorResponse,
     canonical_snapshot_id,
     dump_city_rating,
     dump_parsed_dataset,
-    error_body,
 )
 from utility_rating.dataset import parse_dataset
 from utility_rating.scoring import score_city
@@ -42,6 +43,7 @@ _logger = get_logger("api.scoring_main", service=ServiceName.SCORING)
 
 _INVALID_ENVELOPE = "invalid_envelope"
 _SNAPSHOT_MISMATCH = "snapshot_mismatch"
+_INTERNAL_ERROR = "internal_error"
 
 _Operation = Callable[[Envelope], tuple[dict, int]]
 
@@ -97,6 +99,12 @@ def _score(envelope: Envelope) -> tuple[dict, int]:
     return dump_city_rating(envelope.snapshot_id, rating), len(dataset.houses)
 
 
+def _error(status: int, code: str, message: str) -> JSONResponse:
+    """Ответ-отказ в форме протокола ErrorResponse."""
+    body = ErrorResponse(error=ErrorDetail(code=code, message=message))
+    return JSONResponse(status_code=status, content=body.model_dump())
+
+
 def _rejected(operation: str, status: int, code: str, message: str) -> JSONResponse:
     """Отказ операции: одно событие WARNING и тело ошибки."""
     _logger.warning(
@@ -105,7 +113,7 @@ def _rejected(operation: str, status: int, code: str, message: str) -> JSONRespo
         operation=operation,
         code=code,
     )
-    return JSONResponse(status_code=status, content=error_body(code, message))
+    return _error(status, code, message)
 
 
 async def _run(request: Request, operation: str, compute: _Operation) -> JSONResponse:
@@ -125,13 +133,14 @@ async def _run(request: Request, operation: str, compute: _Operation) -> JSONRes
     except DatasetRejected as exc:
         return _rejected(operation, 422, exc.code.value, str(exc))
     except Exception as exc:
+        # Текст исключения может содержать значения набора: наружу только код.
         _logger.error(
             "SCORING_OPERATION_FAILED",
             "scoring operation failed",
             operation=operation,
             error_type=type(exc).__name__,
         )
-        raise
+        return _error(500, _INTERNAL_ERROR, "scoring operation failed")
     _logger.info(
         "SCORING_OPERATION_COMPLETED",
         "scoring operation completed",
