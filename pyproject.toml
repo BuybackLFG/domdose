@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "domdose-core"
 version = "0.1.0"
-description = "Configuration and dataset contracts for DomDose"
+description = "Configuration, dataset contracts and rating method for DomDose"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.12,<3",
@@ -18,11 +18,12 @@ dev = ["pytest>=8,<10", "ruff>=0.14,<1"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "contract*"]
+include = ["core*", "contract*", "rating*"]
 
 [tool.setuptools.package-data]
 contract = ["dataset.schema.json", "py.typed"]
 core = ["py.typed"]
+rating = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

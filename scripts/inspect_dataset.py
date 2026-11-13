@@ -33,6 +33,7 @@ TZ10 = timezone(timedelta(hours=10))
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 CARD_RE = re.compile(r"/(\d+)\.html(?:[?#].*)?$")
 SIX_RANGE_RE = re.compile(r"(\d{6})\D{1,4}(\d{6})")
+CONTRACT_DUR_TOL = 0.005
 DUR_TOL = 1e-9
 
 SCHEMA_KEYWORDS_SUPPORTED = [
@@ -517,7 +518,7 @@ def inspect(dataset_path, schema_path):
             label = None
             if diff <= DUR_TOL:
                 duration_checks["exact_within_tol"] += 1
-            elif abs(round(computed, 2) - float(duration)) <= 1e-12:
+            elif diff <= CONTRACT_DUR_TOL and abs(round(computed, 2) - float(duration)) <= 1e-12:
                 duration_checks["off_by_rounding_2dp"] += 1
                 label = "rounded_2dp"
             else:
@@ -688,6 +689,7 @@ def inspect(dataset_path, schema_path):
 
     report["durations"] = {
         "tolerance_hours": DUR_TOL,
+        "contract_tolerance_hours": CONTRACT_DUR_TOL,
         "compared": duration_checks["compared"],
         "matching_within_tolerance": duration_checks["exact_within_tol"],
         "off_by_2dp_rounding": duration_checks["off_by_rounding_2dp"],

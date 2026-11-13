@@ -222,6 +222,36 @@ def test_house_checker_catches_unnormalized_weights():
         )
 
 
+def test_house_checker_sums_empty_weights_as_zero_and_known_as_one():
+    empty = house(state="not_applicable", overall=None, weights=())
+    assert_house(empty, state="not_applicable", overall=None, effective_weights={})
+    normalized = house(
+        weights=(
+            ("electricity", 0.30),
+            ("cold_water", 0.25),
+            ("heating", 0.25),
+            ("hot_water", 0.20),
+        )
+    )
+    assert_house(
+        normalized,
+        state="approximate",
+        effective_weights={
+            "electricity": 0.30,
+            "cold_water": 0.25,
+            "heating": 0.25,
+            "hot_water": 0.20,
+        },
+    )
+    unnormalized = house(weights=(("electricity", 0.30), ("cold_water", 0.25)))
+    with pytest.raises(AssertionError, match="effective_weights sum"):
+        assert_house(
+            unnormalized,
+            state="approximate",
+            effective_weights={"electricity": 0.30, "cold_water": 0.25},
+        )
+
+
 def test_report_checker_catches_window_off_by_one():
     wrong = report(end=WINDOW_END.replace(hour=1))
     with pytest.raises(AssertionError, match="window.end_exclusive"):

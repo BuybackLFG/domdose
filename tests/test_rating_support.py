@@ -397,8 +397,10 @@ def assert_house(
                 expected,
                 f"{house.house_id}.effective_weights[{category_type}]",
             )
-        assert math.isclose(sum(actual.values()), 1.0, rel_tol=0.0, abs_tol=1e-9), (
-            f"{house.house_id}.effective_weights sum: {sum(actual.values())!r}"
+        expected_total = 0.0 if not effective_weights else 1.0
+        actual_total = sum(actual.values())
+        assert math.isclose(actual_total, expected_total, rel_tol=0.0, abs_tol=1e-9), (
+            f"{house.house_id}.effective_weights sum: {actual_total!r}"
         )
     if limiting is not None:
         assert set(house.limiting_categories) == set(limiting), (

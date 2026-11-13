@@ -114,6 +114,7 @@ VALID_VARIANTS = [
     "nullable-counts",
     "integer-float",
     "tolerance",
+    "rounded-source",
     "alternate-ids",
     "zero-district",
     "all-categories-services",
@@ -155,6 +156,8 @@ def test_valid_boundaries_and_unknowns(data, variant):
         event["houses_affected"] = 1.0
     elif variant == "tolerance":
         event["duration_hours"] += 5e-10
+    elif variant == "rounded-source":
+        event["duration_hours"] += 0.003333
     elif variant == "alternate-ids":
         data["houses"][0]["id"] = "other-house"
         data["meta"]["sources"][0]["id"] = "other-source"
@@ -205,7 +208,7 @@ INVALID_VALUES = [
     (("events", 0, "duration_hours"), -1),
     (("events", 0, "duration_hours"), float("inf")),
     (("events", 0, "duration_hours"), float("nan")),
-    (("events", 0, "duration_hours"), 4.000001),
+    (("events", 0, "duration_hours"), 4.006),
     (("events", 0, "duration_hours"), None),
     (("events", 0, "houses_affected"), -1),
     (("events", 0, "houses_affected"), 11),

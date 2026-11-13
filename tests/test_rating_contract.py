@@ -11,7 +11,6 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
-from rating import CalculationReport, CalculationRequest, evaluate
 from test_rating_support import (
     CATEGORY_ORDER,
     POLICY,
@@ -33,6 +32,7 @@ from test_rating_support import (
 
 from contract.dataset import Dataset, read_dataset
 from contract.errors import ContractIssue, ContractRefused
+from rating import CalculationReport, CalculationRequest, evaluate
 
 CANARY = "DO_NOT_DISCLOSE_rating_canary"
 
@@ -165,11 +165,12 @@ def test_request_rejects_empty_duplicate_naive_wrong_offset_and_bad_types(kwargs
 
 def test_evaluate_accepts_dataset_mapping_string_bytes_and_request_mapping():
     data = one_house_dataset()
+    dataset_json = json.dumps(data, ensure_ascii=False)
     request = CalculationRequest(target_house_ids=("h1",), end_exclusive=WINDOW_END)
     reports = [
         evaluate(copy.deepcopy(data), request),
-        evaluate(copy.deepcopy(data), dataset_json := json.dumps(data, ensure_ascii=False)),
-        evaluate(copy.deepcopy(data), dataset_json.encode("utf-8")),
+        evaluate(dataset_json, request),
+        evaluate(dataset_json.encode("utf-8"), request),
         evaluate(read_dataset(copy.deepcopy(data)), request),
         evaluate(
             copy.deepcopy(data),
@@ -184,6 +185,29 @@ def test_evaluate_accepts_dataset_mapping_string_bytes_and_request_mapping():
         assert isinstance(report, CalculationReport)
         assert report.model_dump() == reports[0].model_dump()
     assert reports[0].policy_version == POLICY
+
+
+def test_request_json_string_or_bytes_is_refused_as_invalid_request():
+    data = one_house_dataset()
+    payload = {
+        "target_house_ids": ["h1"],
+        "end_exclusive": "2026-11-13T00:00:00+10:00",
+    }
+    canary_payload = {**payload, "target_house_ids": [CANARY]}
+    for request in (
+        json.dumps(payload),
+        json.dumps(canary_payload, ensure_ascii=False),
+        b"{not json",
+        "строка",
+    ):
+        # Only a Mapping (or a validated DTO) is a request; JSON text and bytes of
+        # the request are malformed input, not a serialized shortcut.
+        with pytest.raises(ContractRefused) as caught:
+            evaluate(copy.deepcopy(data), request)
+        error = caught.value
+        assert isinstance(error.issues, tuple) and error.issues
+        assert any(issue.code == "INVALID_REQUEST" for issue in error.issues), error.issues
+        assert_safe(error, CANARY)
 
 
 def test_direct_dataset_is_revalidated_through_read_dataset():
@@ -243,7 +267,7 @@ def test_unknown_policy_is_refused_with_code_path_and_safe_error():
 
 
 @pytest.mark.parametrize(
-    ("request", "expected_code"),
+    ("payload", "expected_code"),
     [
         (
             {"target_house_ids": [], "end_exclusive": "2026-11-13T00:00:00+10:00"},
@@ -278,9 +302,9 @@ def test_unknown_policy_is_refused_with_code_path_and_safe_error():
         ),
     ],
 )
-def test_malformed_request_mapping_is_typed_and_safe(request, expected_code):
+def test_malformed_request_mapping_is_typed_and_safe(payload, expected_code):
     with pytest.raises(ContractRefused) as caught:
-        evaluate(one_house_dataset(), request)
+        evaluate(one_house_dataset(), payload)
     error = caught.value
     assert_safe(error, CANARY)
     assert error.issues

@@ -1,22 +1,42 @@
+param(
+    [string]$Python = ''
+)
+
 $ErrorActionPreference = 'Stop'
 $workspace = Split-Path -Parent $PSScriptRoot
-$python = Join-Path $workspace '.venv\Scripts\python.exe'
+if (-not $Python) {
+    $candidate = Join-Path $workspace '.venv\Scripts\python.exe'
+    if (Test-Path $candidate) {
+        $Python = $candidate
+    } elseif ($env:PYTHON) {
+        $Python = $env:PYTHON
+    } else {
+        throw 'Python interpreter not found. Pass -Python <path> or create .venv in the workspace.'
+    }
+}
+if (-not (Test-Path $Python)) {
+    throw "Python interpreter not found: $Python"
+}
+
 $env:TEMP = Join-Path $workspace '.local\tmp'
 $env:TMP = $env:TEMP
 $env:TMPDIR = $env:TEMP
 $env:PIP_CACHE_DIR = Join-Path $workspace '.local\pip-cache'
 $env:PYTHONNOUSERSITE = '1'
 $env:PYTHONDONTWRITEBYTECODE = '1'
+$env:PYTHONPATH = $workspace
 New-Item -ItemType Directory -Force -Path $env:TEMP, $env:PIP_CACHE_DIR | Out-Null
+
 Push-Location $workspace
 try {
-    & $python -m pytest tests/test_dataset.py tests/test_config_logging.py tests/test_architecture.py tests/test_instrument.py
-    if ($LASTEXITCODE -ne 0) { throw 'Foundation tests failed.' }
-    & $python -m pytest tests/test_rating_instrument.py
-    if ($LASTEXITCODE -ne 0) { throw 'Rating instrument checks failed.' }
-    & $python -m ruff check core contract
+    $basetemp = Join-Path $env:TEMP ('check-library-' + [guid]::NewGuid().ToString('N'))
+    & $Python -B -m pytest tests -q --basetemp=$basetemp
+    if ($LASTEXITCODE -ne 0) { throw 'Library tests failed.' }
+    & $Python -B -m ruff check core contract rating tests scripts/inspect_dataset.py scripts/rating_readiness.py
     if ($LASTEXITCODE -ne 0) { throw 'Library lint failed.' }
-    Write-Output 'Foundation checks passed. Rating implementation and application integration are not checked by this command.'
+    & $Python -B -m ruff format --check rating scripts/rating_readiness.py
+    if ($LASTEXITCODE -ne 0) { throw 'Rating formatting check failed.' }
+    Write-Output 'Library checks passed: synthetic tests and lint only. Application checks (scripts/check.sh) and real-data rating are separate.'
 } finally {
     Pop-Location
 }

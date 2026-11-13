@@ -33,7 +33,10 @@ _DISTRICT_KEYS = (
     "Фрунзенский",
 )
 _INTEGRAL_HOUSE_FIELDS = ("year_built", "floors", "apartments")
-_HOURS_TOLERANCE = 1e-9
+# Half of the 0.01 hour rounding step used by the published source. A stored
+# duration must agree with its actual/planned endpoints within this tolerance;
+# the calculation uses the stored value.
+_HOURS_TOLERANCE = 0.005
 _TIMESTAMP_PATTERN = re.compile(
     r"^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
 )

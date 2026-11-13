@@ -11,7 +11,6 @@ import math
 from datetime import date, datetime, timedelta
 
 import pytest
-from rating import CalculationReport, evaluate
 from test_rating_support import (
     CATEGORIES,
     CATEGORY_ORDER,
@@ -32,6 +31,8 @@ from test_rating_support import (
     make_request,
     penalty,
 )
+
+from rating import CalculationReport, evaluate
 
 
 def evaluate_house(
@@ -870,20 +871,26 @@ def test_penalty_midpoint_at_sqrt_two_is_0165():
                 start=extra_start,
                 end=extra_start + timedelta(hours=extra_hours),
                 scope="district",
+                affected=2,
             ),
         ],
         city_houses=2,
     )
     _report, house = evaluate_house(data)
     electricity = category_rating(house, "electricity")
+    # Q_M = (1*1*2 + 2*0.5*(2*sqrt(2)-2)) / (1+2) = 2*sqrt(2)/3.
+    # The target maximum is 2, so the maximum ratio is 2/(2*sqrt(2)/3) = 3/sqrt(2).
+    maximum_ratio = 3.0 / math.sqrt(2.0)
+    maximum_penalty = 0.33 + 0.34 * (math.log2(maximum_ratio) - 1.0)
+    expected_score = 1.0 - 0.4 * 0.165 - 0.2 * maximum_penalty
     assert electricity.ratios.frequency == pytest.approx(1.0, abs=1e-9)
     assert electricity.ratios.hours == pytest.approx(math.sqrt(2.0), abs=1e-9)
-    assert electricity.ratios.maximum == pytest.approx(math.sqrt(2.0), abs=1e-9)
+    assert electricity.ratios.maximum == pytest.approx(maximum_ratio, abs=1e-9)
     assert electricity.penalties.frequency == pytest.approx(0.0, abs=1e-9)
     assert electricity.penalties.hours == pytest.approx(0.165, abs=1e-9)
-    assert electricity.penalties.maximum == pytest.approx(0.165, abs=1e-9)
-    assert electricity.score == pytest.approx(0.901, abs=1e-9)
-    assert house.overall == pytest.approx(0.901, abs=1e-9)
+    assert electricity.penalties.maximum == pytest.approx(maximum_penalty, abs=1e-9)
+    assert electricity.score == pytest.approx(expected_score, abs=1e-9)
+    assert house.overall == pytest.approx(expected_score, abs=1e-9)
 
 
 # ---------------------------------------------------------------------------
