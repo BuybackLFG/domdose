@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Единственная точка входа для проверок. Локальный режим: пуша нет, CI ещё не активен.
+# Единственная точка входа для локальных проверок.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -10,7 +10,7 @@ UV="${UV_BIN:-uv}"
 step() { printf '\n== %s ==\n' "$1"; }
 
 step "backend: uv sync"
-(cd backend && "$UV" sync --quiet)
+(cd backend && "$UV" sync --locked --quiet)
 
 step "backend: ruff format --check"
 (cd backend && "$UV" run ruff format --check .)
