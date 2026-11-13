@@ -7,6 +7,8 @@ import pytest
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 
+import nginx_config
+
 ROOT = Path(__file__).resolve().parents[1]
 COMPOSE_PATH = ROOT / "compose.yaml"
 COMPOSE_TEXT = COMPOSE_PATH.read_text(encoding="utf-8")
@@ -144,7 +146,11 @@ def test_health_readiness_dependencies_and_grace_period():
         assert "/ready" in block
         assert re.search(r"(?m)^    stop_grace_period:\s*30s\s*$", block)
 
-    for service, dependency in (("api", "scoring"), ("frontend", "api")):
+    # frontend стартует и при неготовом api: иначе код отказа данных отдать некому.
+    for service, dependency, condition in (
+        ("api", "scoring", "service_healthy"),
+        ("frontend", "api", "service_started"),
+    ):
         block = service_block(service)
         assert direct_key(block, "depends_on")
         dependency_match = re.search(
@@ -152,10 +158,10 @@ def test_health_readiness_dependencies_and_grace_period():
             block,
         )
         assert dependency_match is not None
-        assert re.search(
-            r"(?m)^        condition:\s*service_healthy\s*$",
-            dependency_match.group("body"),
+        conditions = re.findall(
+            r"(?m)^        condition:\s*(\S+)\s*$", dependency_match.group("body")
         )
+        assert conditions == [condition], (service, dependency, conditions)
 
 
 def test_runtime_configuration_forbids_online_geo_services_and_extra_backends():
@@ -191,15 +197,363 @@ def test_base_images_are_pinned_and_latest_is_absent():
             )
 
 
+def nginx_tree():
+    return nginx_config.parse(read_required(NGINX_PATH))
+
+
 def test_nginx_exposes_health_ready_and_api_but_never_internal_scoring():
     nginx = read_required(NGINX_PATH)
+    root = nginx_config.parse(nginx)
 
     assert re.search(r"location\s+=\s+/health\s*\{", nginx)
     assert re.search(r"location\s+=\s+/ready\s*\{", nginx)
     assert re.search(r"location\s+/api/\s*\{", nginx)
-    assert re.search(r"proxy_pass\s+http://api:8000(?:/|;)", nginx)
-    assert re.search(r"location\s+[^*{]*internal", nginx) is None
+    assert nginx_config.location_names_with_internal(root) == []
+    assert not nginx_config.proxies_to_scoring(root)
     assert re.search(r"proxy_pass\s+http://scoring(?::|\s|;)", nginx) is None
+
+
+def test_nginx_api_proxy_reresolves_api_name_at_runtime():
+    root = nginx_tree()
+    api = nginx_config.location(root, "/api/")
+
+    assert api is not None, "location /api/ is missing"
+    target = nginx_config.proxy_target(api, root)
+    assert target is not None and target.kind in ("variable", "upstream"), (
+        f"/api/ must proxy through a resolver-backed variable or upstream: {target}"
+    )
+    assert nginx_config.reresolves_api(api, root), (
+        "/api/ must reach http://api:8000 with resolver 127.0.0.11 valid<=30s"
+    )
+
+
+def test_nginx_spa_documents_are_gated_by_api_readiness():
+    problems = nginx_config.spa_gate_problems(nginx_tree())
+
+    assert problems == [], problems
+
+
+def test_nginx_health_stays_independent_of_api():
+    problems = nginx_config.health_problems(nginx_tree())
+
+    assert problems == [], problems
+
+
+def test_nginx_ready_fails_when_api_is_not_ready():
+    problems = nginx_config.ready_problems(nginx_tree())
+
+    assert problems == [], problems
+
+
+REFERENCE_NGINX = """
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+map $gate_error $gate_code {
+    ""      api_unavailable;
+    default $gate_error;
+}
+
+server {
+    listen 80;
+    set $api_origin http://api:8000;
+    # location /internal-comment { proxy_pass http://scoring:8001; }
+
+    location = /health {
+        return 200 '{"status":"ok"}';
+    }
+
+    location = /ready {
+        if (!-f $document_root/index.html) {
+            return 503 '{"status":"not_ready"}';
+        }
+        proxy_pass $api_origin/api/ready;
+        error_page 502 504 =503 @ready_unavailable;
+    }
+
+    location @ready_unavailable {
+        return 503 '{"status":"not_ready","reason":"api_unavailable"}';
+    }
+
+    location = /_gate {
+        internal;
+        proxy_pass $api_origin/api/ready;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+    }
+
+    location /api/ {
+        proxy_pass $api_origin;
+    }
+
+    location /assets/ {
+        try_files $uri =404;
+    }
+
+    location /maps/ {
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        auth_request /_gate;
+        auth_request_set $gate_error $upstream_http_x_domdossier_error;
+        error_page 500 = @data_unavailable;
+    }
+
+    location / {
+        auth_request /_gate;
+        auth_request_set $gate_error $upstream_http_x_domdossier_error;
+        error_page 500 = @data_unavailable;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location @data_unavailable {
+        default_type text/plain;
+        add_header X-DomDossier-Error $gate_code always;
+        return 503 "Данные недоступны: $gate_code";
+    }
+}
+"""
+
+def replaced(text, *replacements):
+    """Текст с заменами; каждая заменяемая строка обязана присутствовать."""
+    for old, new in replacements:
+        assert old in text, old
+        text = text.replace(old, new)
+    return text
+
+
+def nginx_variant(*replacements, base=REFERENCE_NGINX):
+    return nginx_config.parse(replaced(base, *replacements))
+
+
+UPSTREAM_NGINX = replaced(
+    REFERENCE_NGINX,
+    (
+        "server {\n    listen 80;",
+        "upstream api_backend {\n    zone api_backend 64k;\n"
+        "    server api:8000 resolve;\n}\n\nserver {\n    listen 80;",
+    ),
+    ("proxy_pass $api_origin;", "proxy_pass http://api_backend;"),
+)
+
+
+def api_location_ok(root):
+    return nginx_config.reresolves_api(nginx_config.location(root, "/api/"), root)
+
+
+@pytest.mark.parametrize(
+    ("root", "expected"),
+    [
+        pytest.param(nginx_variant(), True, id="variable-with-resolver"),
+        pytest.param(nginx_variant(base=UPSTREAM_NGINX), True, id="upstream-resolve"),
+        pytest.param(
+            nginx_variant(("proxy_pass $api_origin;", "proxy_pass http://api:8000;")),
+            False,
+            id="static-proxy-pass",
+        ),
+        pytest.param(
+            nginx_variant(("valid=10s", "valid=60s")), False, id="valid-over-30s"
+        ),
+        pytest.param(
+            nginx_variant(("valid=10s", "valid=1m")), False, id="valid-one-minute"
+        ),
+        pytest.param(nginx_variant((" valid=10s", "")), False, id="no-valid"),
+        pytest.param(
+            nginx_variant(("127.0.0.11", "8.8.8.8")), False, id="external-resolver"
+        ),
+        pytest.param(
+            nginx_variant(("resolver 127.0.0.11 valid=10s ipv6=off;", "")),
+            False,
+            id="no-resolver",
+        ),
+        pytest.param(
+            nginx_variant(("set $api_origin http://api:8000;", "")),
+            False,
+            id="undefined-variable",
+        ),
+        pytest.param(
+            nginx_variant(
+                ("set $api_origin http://api:8000;", "set $api_origin http://scoring:8001;")
+            ),
+            False,
+            id="variable-to-scoring",
+        ),
+        pytest.param(
+            nginx_variant(("zone api_backend 64k;\n", ""), base=UPSTREAM_NGINX),
+            False,
+            id="upstream-without-zone",
+        ),
+        pytest.param(
+            nginx_variant(("server api:8000 resolve;", "server api:8000;"), base=UPSTREAM_NGINX),
+            False,
+            id="upstream-without-resolve",
+        ),
+    ],
+)
+def test_nginx_reresolve_evaluator(root, expected):
+    assert api_location_ok(root) is expected
+
+
+COMPOSITE_MAP_NGINX = replaced(
+    REFERENCE_NGINX,
+    (
+        'map $gate_error $gate_code {\n    ""      api_unavailable;\n'
+        "    default $gate_error;\n}",
+        'map "$gate_status|$gate_error" $gate_code {\n'
+        '    "~\\|(?<code>[a-z_]{1,64})$" $code;\n'
+        "    default api_unavailable;\n}",
+    ),
+    (
+        "        auth_request_set $gate_error",
+        "        auth_request_set $gate_status $upstream_status;\n"
+        "        auth_request_set $gate_error",
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param(REFERENCE_NGINX, id="variable"),
+        pytest.param(UPSTREAM_NGINX, id="upstream"),
+        pytest.param(COMPOSITE_MAP_NGINX, id="composite-map"),
+    ],
+)
+def test_nginx_reference_config_passes_every_gate_check(text):
+    root = nginx_config.parse(text)
+
+    assert nginx_config.spa_gate_problems(root) == []
+    assert nginx_config.health_problems(root) == []
+    assert nginx_config.ready_problems(root) == []
+    assert nginx_config.location_names_with_internal(root) == []
+    assert not nginx_config.proxies_to_scoring(root)
+
+
+@pytest.mark.parametrize(
+    ("replacements", "check", "fragment"),
+    [
+        pytest.param(
+            [("    location / {\n        auth_request /_gate;\n", "    location / {\n")],
+            "spa",
+            "location /: no auth_request",
+            id="fallback-not-gated",
+        ),
+        pytest.param(
+            [("location = /_gate {\n        internal;\n", "location = /_gate {\n")],
+            "spa",
+            "lacks internal directive",
+            id="gate-not-internal",
+        ),
+        pytest.param(
+            [("location = /_gate", "location = /internal_gate"), ("/_gate;", "/internal_gate;")],
+            "spa",
+            "gate name contains internal",
+            id="gate-named-internal",
+        ),
+        pytest.param(
+            [("proxy_pass $api_origin/api/ready;\n        proxy_pass_request_body",
+              "proxy_pass $api_origin/api/houses;\n        proxy_pass_request_body")],
+            "spa",
+            "gate does not proxy re-resolved api /api/ready",
+            id="gate-wrong-path",
+        ),
+        pytest.param(
+            [("try_files $uri $uri/ /index.html;", "return 200 'spa';")],
+            "spa",
+            "bypasses auth_request",
+            id="return-bypasses-gate",
+        ),
+        pytest.param(
+            [("error_page 500 = @data_unavailable;\n        try_files",
+              "error_page 500 @data_unavailable;\n        try_files")],
+            "spa",
+            "must set the code",
+            id="error-page-keeps-500",
+        ),
+        pytest.param(
+            [("add_header X-DomDossier-Error $gate_code always;",
+              "add_header X-DomDossier-Error $gate_code;")],
+            "spa",
+            "lacks add_header",
+            id="header-without-always",
+        ),
+        pytest.param(
+            [('return 503 "Данные недоступны: $gate_code";',
+              'return 503 "Данные недоступны";')],
+            "spa",
+            "does not carry the code",
+            id="body-without-code",
+        ),
+        pytest.param(
+            [('return 503 "Данные недоступны: $gate_code";',
+              'return 503 \'<div id="root"></div> $gate_code\';')],
+            "spa",
+            "contains SPA",
+            id="body-is-spa",
+        ),
+        pytest.param(
+            [('    ""      api_unavailable;\n', "")],
+            "spa",
+            "no api_unavailable",
+            id="no-api-unavailable-default",
+        ),
+        pytest.param(
+            [("location / {", "location /spa/ {")],
+            "spa",
+            "SPA fallback location / is missing",
+            id="no-fallback-location",
+        ),
+        pytest.param(
+            [("return 200 '{\"status\":\"ok\"}';", "proxy_pass $api_origin/api/health;")],
+            "health",
+            "/health",
+            id="health-depends-on-api",
+        ),
+        pytest.param(
+            [("proxy_pass $api_origin/api/ready;\n        error_page 502",
+              "return 200 'ready';\n        proxy_pass $api_origin/api/ready;\n"
+              "        error_page 502")],
+            "ready",
+            "bypasses api check",
+            id="ready-return-200",
+        ),
+        pytest.param(
+            [("proxy_pass $api_origin/api/ready;\n        error_page 502 504 =503 @ready_unavailable;",
+              "try_files /index.html =503;")],
+            "ready",
+            "does not check api readiness",
+            id="ready-without-api",
+        ),
+        pytest.param(
+            [("error_page 502 504 =503 @ready_unavailable;", "")],
+            "ready",
+            "no error_page for 502",
+            id="ready-api-down-is-502",
+        ),
+    ],
+)
+def test_nginx_gate_evaluator_reports_each_defect(replacements, check, fragment):
+    root = nginx_variant(*replacements)
+    problems = {
+        "spa": nginx_config.spa_gate_problems,
+        "health": nginx_config.health_problems,
+        "ready": nginx_config.ready_problems,
+    }[check](root)
+
+    assert any(fragment in problem for problem in problems), problems
+
+
+@pytest.mark.parametrize(
+    ("text", "names"),
+    [
+        ("server { location = /_gate { internal; } }", []),
+        ("server { location /internal/ { return 404; } }", [("/internal/",)]),
+        ("server { location ~ ^/Internal/v1 { return 404; } }", [("~", "^/Internal/v1")]),
+        ("server {\n# location /internal/ {}\nlocation / { internal; } }", []),
+    ],
+)
+def test_nginx_internal_location_name_is_not_the_internal_directive(text, names):
+    assert nginx_config.location_names_with_internal(nginx_config.parse(text)) == names
 
 
 def test_nginx_ready_checks_spa_and_required_local_map_asset():
