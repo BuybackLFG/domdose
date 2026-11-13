@@ -1,7 +1,13 @@
-"""Парсинг JSON-датасета в нормализованный вход скоринга."""
+"""Парсинг JSON-датасета в нормализованный вход скоринга.
+
+Коды отказа: битая схема — schema_invalid; неполные registry/coverage
+и меньше 20 домов — dataset_incomplete; остальное, включая структурные
+дефекты, пропущенные слабой схемой, — dataset_invalid.
+"""
 
 from collections.abc import Mapping
 from datetime import datetime, timedelta
+from enum import Enum
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, UnknownType
@@ -16,17 +22,14 @@ from contract.utility_rating import (
     TimeWindow,
     UtilityCategory,
     UtilityDataset,
+    canonical_event_key,
 )
 
 _WINDOW_LENGTH = timedelta(days=30)
 _TZ_OFFSET = timedelta(hours=10)
-_CATEGORY_ORDER = {
-    "hot_water": 0,
-    "cold_water": 1,
-    "electricity": 2,
-    "heating": 3,
-}
-_COVERAGE_NAMES = tuple(_CATEGORY_ORDER)
+_COVERAGE_NAMES = tuple(category.value for category in UtilityCategory)
+_COVERAGE_STATES = frozenset({"complete", "incomplete"})
+_ARRAY = (list, tuple)
 _PILOT_HOUSE_COUNT = 20
 
 
@@ -38,16 +41,47 @@ def parse_dataset(raw: Mapping, schema: Mapping) -> UtilityDataset:
         raise TypeError("schema must be Mapping")
     _validate_schema(raw, schema)
     _check_completeness(raw)
-    window = _parse_window(raw["window"])
-    houses = _parse_houses(raw["houses"])
+    window = _parse_window(_field(raw, "window", "dataset"))
+    houses = _parse_houses(_typed(raw, "houses", "dataset", _ARRAY))
     house_ids = frozenset(house.house_id for house in houses)
-    events = _parse_events(raw["events"], house_ids, window)
+    events = _parse_events(_typed(raw, "events", "dataset", _ARRAY), house_ids, window)
     return UtilityDataset(
         houses=houses,
         events=events,
         window=window,
         complete_categories=frozenset(UtilityCategory),
     )
+
+
+def _invalid(message: str) -> DatasetRejected:
+    """Отказ dataset_invalid: структура или значения набора неверны."""
+    return DatasetRejected(DatasetRejectionCode.DATASET_INVALID, message)
+
+
+def _field(record: object, key: str, owner: str) -> object:
+    """Значение обязательного ключа JSON-объекта owner; иначе dataset_invalid."""
+    if not isinstance(record, Mapping):
+        raise _invalid(f"{owner} must be object")
+    if key not in record:
+        raise _invalid(f"{owner}.{key} is required")
+    return record[key]
+
+
+def _typed(record: object, key: str, owner: str, kind: type | tuple) -> object:
+    """Обязательное значение заданного типа; иначе dataset_invalid."""
+    value = _field(record, key, owner)
+    if not isinstance(value, kind):
+        raise _invalid(f"{owner}.{key} has invalid type")
+    return value
+
+
+def _member(kind: type[Enum], record: object, key: str, owner: str) -> Enum:
+    """Член перечисления по значению ключа; неизвестное значение — dataset_invalid."""
+    value = _field(record, key, owner)
+    try:
+        return kind(value)
+    except ValueError as exc:
+        raise _invalid(f"{owner}.{key} has unknown value") from exc
 
 
 def _validate_schema(raw: Mapping, schema: Mapping) -> None:
@@ -71,14 +105,24 @@ def _validate_schema(raw: Mapping, schema: Mapping) -> None:
 
 
 def _check_completeness(raw: Mapping) -> None:
-    """Для скоринга нужен полный справочник и четыре complete."""
-    if raw["registry_complete"] is not True:
+    """Для скоринга нужен полный справочник и четыре complete.
+
+    Неверный тип или неизвестное состояние покрытия — dataset_invalid.
+    """
+    if _typed(raw, "registry_complete", "dataset", bool) is not True:
         raise DatasetRejected(
             DatasetRejectionCode.DATASET_INCOMPLETE,
             "registry_complete must be true for scoring",
         )
-    coverage = raw["coverage"]
-    incomplete = [name for name in _COVERAGE_NAMES if coverage[name] != "complete"]
+    coverage = _field(raw, "coverage", "dataset")
+    states = [_field(coverage, name, "coverage") for name in _COVERAGE_NAMES]
+    if not all(isinstance(state, str) and state in _COVERAGE_STATES for state in states):
+        raise _invalid("coverage values must be complete or incomplete")
+    incomplete = [
+        name
+        for name, state in zip(_COVERAGE_NAMES, states, strict=True)
+        if state != "complete"
+    ]
     if incomplete:
         raise DatasetRejected(
             DatasetRejectionCode.DATASET_INCOMPLETE,
@@ -86,7 +130,7 @@ def _check_completeness(raw: Mapping) -> None:
         )
 
 
-def _parse_moment(text: str, field: str) -> datetime:
+def _parse_moment(text: object, field: str) -> datetime:
     """Разобрать ISO-moment с обязательным смещением +10:00."""
     try:
         moment = datetime.fromisoformat(text)
@@ -102,10 +146,10 @@ def _parse_moment(text: str, field: str) -> datetime:
     return moment
 
 
-def _parse_window(raw_window: Mapping) -> TimeWindow:
+def _parse_window(raw_window: object) -> TimeWindow:
     """Разобрать окно длительностью ровно 30 суток."""
-    start = _parse_moment(raw_window["start"], "window.start")
-    end = _parse_moment(raw_window["end"], "window.end")
+    start = _parse_moment(_field(raw_window, "start", "window"), "window.start")
+    end = _parse_moment(_field(raw_window, "end", "window"), "window.end")
     if end - start != _WINDOW_LENGTH:
         raise DatasetRejected(
             DatasetRejectionCode.DATASET_INVALID, "window must be exactly 30 days"
@@ -113,15 +157,23 @@ def _parse_window(raw_window: Mapping) -> TimeWindow:
     return TimeWindow(start=start, end=end)
 
 
-def _parse_houses(raw_houses: list) -> tuple[House, ...]:
-    """Разобрать справочник: уникальность, порядок и нумерация без пропусков."""
+def _parse_houses(raw_houses: list | tuple) -> tuple[House, ...]:
+    """Разобрать справочник: уникальность, порядок и нумерация без пропусков.
+
+    Меньше 20 домов — dataset_incomplete, больше 20 — dataset_invalid.
+    """
     if len(raw_houses) != _PILOT_HOUSE_COUNT:
-        raise DatasetRejected(
-            DatasetRejectionCode.DATASET_INCOMPLETE,
-            "houses must contain exactly 20 pilot houses",
+        code = (
+            DatasetRejectionCode.DATASET_INCOMPLETE
+            if len(raw_houses) < _PILOT_HOUSE_COUNT
+            else DatasetRejectionCode.DATASET_INVALID
         )
+        raise DatasetRejected(code, "houses must contain exactly 20 pilot houses")
     houses = tuple(
-        House(house_id=item["house_id"], address=item["address"])
+        House(
+            house_id=_typed(item, "house_id", "house", str),
+            address=_typed(item, "address", "house", str),
+        )
         for item in raw_houses
     )
     house_ids = [house.house_id for house in houses]
@@ -149,31 +201,23 @@ def _parse_houses(raw_houses: list) -> tuple[House, ...]:
     return houses
 
 
-def _ended_key(ended: datetime | None) -> tuple[int, datetime | None]:
-    """Ключ сортировки: непустые окончания раньше null."""
-    return (1, None) if ended is None else (0, ended)
-
-
 def _parse_events(
-    raw_events: list, house_ids: frozenset[str], window: TimeWindow
+    raw_events: list | tuple, house_ids: frozenset[str], window: TimeWindow
 ) -> tuple[OutageEvent, ...]:
     """Разобрать события: ссылки, окно, дедупликацию и детерминированный порядок."""
     events: list[OutageEvent] = []
     seen_incidents: set[tuple] = set()
     previous_key: tuple | None = None
     for item in raw_events:
-        house_id = item["house_id"]
+        house_id = _typed(item, "house_id", "event", str)
         if house_id not in house_ids:
             raise DatasetRejected(
                 DatasetRejectionCode.DATASET_INVALID, f"unknown house_id: {house_id!r}"
             )
-        category = UtilityCategory(item["category"])
-        started = _parse_moment(item["started_at"], "started_at")
-        ended = (
-            None
-            if item["ended_at"] is None
-            else _parse_moment(item["ended_at"], "ended_at")
-        )
+        category = _member(UtilityCategory, item, "category", "event")
+        started = _parse_moment(_field(item, "started_at", "event"), "started_at")
+        raw_ended = _field(item, "ended_at", "event")
+        ended = None if raw_ended is None else _parse_moment(raw_ended, "ended_at")
         if ended is not None and ended < started:
             raise DatasetRejected(
                 DatasetRejectionCode.DATASET_INVALID,
@@ -193,9 +237,9 @@ def _parse_events(
             category=category,
             started_at=started,
             ended_at=ended,
-            kind=OutageKind(item["kind"]),
-            is_mass=item["is_mass"],
-            is_natural_disaster=item["is_natural_disaster"],
+            kind=_member(OutageKind, item, "kind", "event"),
+            is_mass=_typed(item, "is_mass", "event", bool),
+            is_natural_disaster=_typed(item, "is_natural_disaster", "event", bool),
         )
         incident = (
             house_id,
@@ -211,13 +255,8 @@ def _parse_events(
                 DatasetRejectionCode.DATASET_INVALID, "duplicate incident"
             )
         seen_incidents.add(incident)
-        key = (
-            house_id,
-            _CATEGORY_ORDER[item["category"]],
-            started,
-            _ended_key(ended),
-            item["source_url"],
-        )
+        source_url = _typed(item, "source_url", "event", str)
+        key = canonical_event_key(house_id, category, started, ended, source_url)
         if previous_key is not None and key < previous_key:
             raise DatasetRejected(
                 DatasetRejectionCode.DATASET_INVALID,

@@ -42,6 +42,44 @@ class OutageKind(str, Enum):
     PLANNED = "planned"
 
 
+# Единственный источник порядка категорий — порядок объявления UtilityCategory.
+_CATEGORY_RANK = {category: index for index, category in enumerate(UtilityCategory)}
+
+
+def category_rank(category: str) -> int:
+    """Позиция категории в порядке объявления UtilityCategory.
+
+    Принимает член UtilityCategory или его строковое значение;
+    KeyError — неизвестная категория.
+    """
+    return _CATEGORY_RANK[category]
+
+
+def ended_rank(ended_at: datetime | None) -> tuple[int, datetime | None]:
+    """Ключ окончания события: известные окончания раньше продолжающихся (None)."""
+    return (1, None) if ended_at is None else (0, ended_at)
+
+
+def canonical_event_key(
+    house_id: str,
+    category: str,
+    started_at: datetime,
+    ended_at: datetime | None,
+    source_url: str,
+) -> tuple:
+    """Ключ канонического порядка событий файла набора по возрастанию.
+
+    Порядок: house_id, категория, начало, окончание (None последним), source_url.
+    """
+    return (
+        house_id,
+        category_rank(category),
+        started_at,
+        ended_rank(ended_at),
+        source_url,
+    )
+
+
 @dataclass(frozen=True)
 class TimeWindow:
     """Полуоткрытое окно расчёта [start, end)."""
