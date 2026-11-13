@@ -329,7 +329,7 @@ export interface components {
          * @description Тип события. Значения зафиксированы: их видят и data-owner, и фронтенд.
          * @enum {string}
          */
-        EventType: "hot_water" | "accident" | "power" | "flood" | "landslide" | "typhoon" | "ice" | "elevator" | "caprepair" | "developer" | "transport";
+        EventType: "hot_water" | "cold_water" | "heat" | "accident" | "power" | "flood" | "landslide" | "typhoon" | "wind" | "ice" | "elevator" | "caprepair" | "developer" | "transport";
         /**
          * Fact
          * @description Утверждение о доме, которое можно проверить по ссылке.
