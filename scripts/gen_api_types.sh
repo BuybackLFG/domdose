@@ -1,39 +1,28 @@
 #!/usr/bin/env bash
-# Генерирует frontend/src/types/api.ts из локального /openapi.json.
-# Backend должен слушать 127.0.0.1:8000. Если он не поднят — скрипт поднимает его сам.
+# Генерирует типы из OpenAPI текущего исходного кода, без запущенного сервера.
+# Необязательный аргумент — путь к выходному файлу.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="$ROOT/frontend/src/types/api.ts"
-URL="${API_URL:-http://127.0.0.1:8000}"
+OUT="${1:-$ROOT/frontend/src/types/api.ts}"
 UV="${UV_BIN:-uv}"
 
-pid=""
-cleanup() {
-  if [[ -n "$pid" ]]; then kill "$pid" 2>/dev/null || true; fi
-}
-trap cleanup EXIT
-
-if ! curl -sf --max-time 2 "$URL/health" >/dev/null 2>&1; then
-  echo "backend не отвечает на $URL — поднимаю временный"
-  (cd "$ROOT/backend" && "$UV" run uvicorn app.main:app --port 8000 --log-level warning) &
-  pid=$!
-  for _ in $(seq 1 50); do
-    curl -sf --max-time 1 "$URL/health" >/dev/null 2>&1 && break
-    sleep 0.2
-  done
-  curl -sf --max-time 2 "$URL/health" >/dev/null || {
-    echo "не удалось дождаться backend на $URL" >&2
-    exit 1
-  }
-fi
-
 mkdir -p "$(dirname "$OUT")"
+schema="$(mktemp)"
+generated=""
+trap 'rm -f "$schema" ${generated:+"$generated"}' EXIT
+generated="$(mktemp "${OUT}.tmp.XXXXXX")"
+
+(cd "$ROOT/backend" && "$UV" run --locked python -c \
+  'import json; from app.main import app; print(json.dumps(app.openapi(), ensure_ascii=False))') >"$schema"
+
 {
-  echo "// Сгенерировано из $URL/openapi.json — не править руками."
+  echo "// Сгенерировано из OpenAPI backend — не править руками."
   echo "// Обновление: ./scripts/gen_api_types.sh"
   echo
-  (cd "$ROOT/frontend" && npx --no-install openapi-typescript "$URL/openapi.json")
-} >"$OUT"
+  (cd "$ROOT/frontend" && npx --no-install openapi-typescript "$schema")
+} >"$generated"
+chmod 644 "$generated"
+mv -f "$generated" "$OUT"
 
 echo "готово: ${OUT#"$ROOT"/}"
