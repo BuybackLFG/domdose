@@ -24,7 +24,7 @@
 Итоговый JSON сохраняется по пути:
 
 ```text
-C:\Progg\Development\ДомДосье2\dataset\output\utility-rating.json
+dataset/output/utility-rating.json
 ```
 
 Если внешняя модель не имеет доступа к файловой системе, оператор сохраняет её единственный
