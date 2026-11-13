@@ -20,11 +20,13 @@ RUN groupadd --gid 10001 app \
     && mkdir -p /var/log/domdossier \
     && chown app:app /var/log/domdossier
 
-COPY api ./api
-COPY contract ./contract
-COPY core ./core
-COPY sources ./sources
-COPY utility_rating ./utility_rating
+# Ровно замыкание импортов api.scoring_main и __init__.py его пакетов: без
+# публичного api, dossier, файлового и HTTP-клиентского кода sources.
+COPY api/__init__.py api/scoring_main.py ./api/
+COPY contract/__init__.py contract/utility_rating.py ./contract/
+COPY core/__init__.py core/logging.py ./core/
+COPY sources/__init__.py sources/scoring_protocol.py ./sources/
+COPY utility_rating/__init__.py utility_rating/dataset.py utility_rating/metrics.py utility_rating/scoring.py ./utility_rating/
 
 USER app
 

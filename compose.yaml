@@ -82,9 +82,11 @@ services:
     networks:
       - internal
       - edge
+    # Только запуск api, не готовность: при отсутствующем или битом наборе
+    # frontend всё равно стартует и отдаёт 503 с кодом причины вместо SPA.
     depends_on:
       api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test:
         - CMD-SHELL

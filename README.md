@@ -122,6 +122,11 @@ py -3.13 -m venv .venv
 Внутренний `api.scoring_main` отвечает на `GET /health` и `GET /ready` и выполняет
 расчёт для `api`; браузеру и хосту в Compose он недоступен.
 
+Каждый ответ-ошибка `api` вида `{"error": {"code": ...}}` несёт тот же код в заголовке
+`X-DomDossier-Error` (`dataset_unavailable`, `scoring_unavailable`, `house_not_found`,
+`invalid_request`, `internal_error`). Отклонённый scoring набор (`schema_invalid`,
+`dataset_invalid`, `dataset_incomplete`) — публично 503 `dataset_unavailable`.
+
 Первый успешный расчёт кэшируется до перезапуска процесса `api`; после замены датасета
 нужен restart.
 
@@ -167,14 +172,19 @@ npm run dev
 |---|---|---|
 | `api` | `api/Dockerfile`, контекст — корень | FastAPI `api.main:app` на 8000, чтение датасета и cache, сценарий досье |
 | `scoring` | `api/scoring.Dockerfile`, контекст — корень | stateless `api.scoring_main:app` на 8001, единственная дверь к `utility_rating` |
-| `frontend` | `frontend/Dockerfile`, контекст — `frontend/` | SPA под Nginx, локальная карта, proxy `/api/` на `api:8000` |
+| `frontend` | `frontend/Dockerfile`, контекст — `frontend/` | SPA под Nginx, локальная карта, proxy `/api/` на `api:8000`, ворота данных для документов SPA |
 
 Базовые образы закреплены тегом и digest: `python:3.13.18-slim-trixie`,
 `node:24.22.3-alpine` (только стадия сборки), `nginx:1.30.6-alpine`. Python-зависимости
 ставятся `pip install --no-cache-dir -r requirements.txt -c constraints.txt` (точные
-версии, см. «Backend»), frontend — `npm ci` по lockfile. Корневой `.dockerignore`
-пропускает в контекст только пакеты приложения, `requirements.txt`, `constraints.txt` и
-схему датасета; реальные выгрузки `dataset/output`, `.env`, `.git`,
+версии, см. «Backend»), frontend — `npm ci` по lockfile. Каждый Python-образ получает
+ровно модули замыкания импортов своей точки входа и `__init__.py` их пакетов: в `api` нет
+`api/scoring_main.py` и `utility_rating`, в `scoring` нет `api/main.py`, `routes.py`,
+`schemas.py`, `errors.py`, `dossier`, `core/config.py` и клиентского кода `sources`;
+CLI-адаптер `sources/legacy_dataset.py` не попадает ни в один. Новый модуль в графе
+импортов точки входа добавляется в её `COPY` и в allowlist корневого `.dockerignore`.
+Корневой `.dockerignore` пропускает в контекст только эти файлы, `requirements.txt`,
+`constraints.txt` и схему датасета; реальные выгрузки `dataset/output`, `.env`, `.git`,
 `tests` и `frontend` в образы `api` и `scoring` не попадают. Python-сервисы работают от
 непривилегированного пользователя с read-only корневой файловой системой.
 
@@ -188,7 +198,18 @@ npm run dev
 * единственный опубликованный порт — `127.0.0.1:8080` → `frontend:80`.
 
 Браузер обращается только к `frontend`, `frontend` — к `api`, `api` — к `scoring`.
-Nginx не проксирует `scoring`.
+Nginx не проксирует `scoring`. Адрес `api` Nginx переразрешает в runtime через DNS
+Docker (`resolver 127.0.0.11 valid=10s`, upstream `server api:8000 resolve`): старт
+`frontend` не требует разрешимого `api`, пересоздание `api` не требует перезапуска
+`frontend`.
+
+Ворота данных: документы SPA (`/`, `/index.html` и SPA-fallback) отдаются только при
+готовности `api` — Nginx проверяет `GET /api/ready` подзапросом `auth_request` (без
+query и тела клиента). Иначе 503, короткая страница «Данные недоступны» без SPA и
+заголовок `X-DomDossier-Error` с кодом из `api` (`dataset_unavailable`,
+`scoring_unavailable`) или `api_unavailable`, если `api` не ответил кодом (не запущен,
+недоступен). `/assets/` и `/maps/` воротами не закрыты: без документа SPA они
+бесполезны и данных досье не содержат. `/api/` проксируется как есть.
 
 Датасет монтируется только в `api`, read-only:
 `${DOMDOSSE_DATASET_DIR:-./dataset/output}` → `/data/dataset`.
@@ -198,9 +219,11 @@ Nginx не проксирует `scoring`.
 
 * `api_logs`, `scoring_logs` — маркированные события `core/logging.py`;
 * `frontend_logs` — access-строки Nginx в формате
-  `[TIMESTAMP] [LEVEL] [frontend] [HTTP_REQUEST] ... | data={...}` (путь без query) и
-  error-строки в штатном формате Nginx. Успешные внутренние healthcheck-запросы не
-  пишутся, отказы пишутся.
+  `[TIMESTAMP] [LEVEL] [frontend] [HTTP_REQUEST] ... | data={...}` (путь без query,
+  `upstream_status`, `error_code` из отправленного `X-DomDossier-Error`). error-строки
+  пишутся только уровня `crit` и выше в штатном формате Nginx (они могут содержать
+  строку запроса с query); штатные отказы запросов видны в access-строках. Успешные
+  внутренние healthcheck-запросы не пишутся, отказы пишутся.
 
 Центрального сервера логов нет; `docker compose logs` — вспомогательный вывод.
 
@@ -210,9 +233,11 @@ Health и readiness (healthcheck каждого сервиса проверяе�
 |---|---|---|
 | `api` | `GET /api/health` | `GET /api/ready` |
 | `scoring` | `GET /health` | `GET /ready` |
-| `frontend` | `GET /health` | `GET /ready` — `index.html`, карта и её манифест на месте, иначе 503; healthcheck дополнительно запрашивает `/maps/vladivostok-pilot.png` |
+| `frontend` | `GET /health` (без `api`) | `GET /ready` — `index.html`, оба изображения карты (`vladivostok-pilot.png`, `vladivostok-pilot-detail.png`) и манифест на месте и `api` готов, иначе 503 с `reason`; healthcheck дополнительно запрашивает `/maps/vladivostok-pilot.png` |
 
-Порядок старта: `scoring` healthy → `api` → `frontend` healthy. `stop_grace_period`
+Порядок старта: `scoring` healthy → `api` → `frontend` после запуска (не готовности)
+`api`: при отсутствующем или битом датасете `api` неготов, а `frontend` всё равно
+стартует и отдаёт 503 с кодом причины; его healthcheck при этом `unhealthy`. `stop_grace_period`
 у всех — 30s; uvicorn завершает запросы за `--timeout-graceful-shutdown 25`, Nginx
 останавливается по `SIGQUIT` (graceful).
 
@@ -234,9 +259,8 @@ docker compose down
 
 Смена датасета: заменить `utility-rating.json` в смонтированном каталоге, выполнить
 `docker compose restart api` и дождаться `healthy` в `docker compose ps` (readiness
-повторно читает и считает набор). Nginx разрешает адрес `api` при старте; если `api`
-пересоздан (`up -d` после изменения конфигурации или образа), перезапустить и
-`frontend`. Ошибка нового набора оставляет `api` неготовым.
+повторно читает и считает набор). Ошибка нового набора оставляет `api` неготовым, а
+документы SPA — закрытыми воротами с кодом причины.
 
 ## Ветки
 

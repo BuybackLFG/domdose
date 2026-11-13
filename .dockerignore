@@ -1,14 +1,30 @@
 # Контекст сборки api и scoring — корень репозитория. Разрешено только то, что
-# копируют api/Dockerfile и api/scoring.Dockerfile; остальное в контекст не попадает.
+# копируют api/Dockerfile и api/scoring.Dockerfile (объединение замыканий импортов
+# api.main и api.scoring_main); остальное в контекст не попадает.
 *
 !requirements.txt
 !constraints.txt
-!api/
-!contract/
-!core/
-!dossier/
-!sources/
-!utility_rating/
+!api/__init__.py
+!api/errors.py
+!api/main.py
+!api/routes.py
+!api/schemas.py
+!api/scoring_main.py
+!contract/__init__.py
+!contract/utility_rating.py
+!core/__init__.py
+!core/config.py
+!core/logging.py
+!dossier/__init__.py
+!dossier/service.py
+!sources/__init__.py
+!sources/scoring_client.py
+!sources/scoring_protocol.py
+!sources/utility_rating_json.py
+!utility_rating/__init__.py
+!utility_rating/dataset.py
+!utility_rating/metrics.py
+!utility_rating/scoring.py
 !dataset/utility-rating-dataset.schema.json
 
 # Явные исключения: реальные данные, секреты, окружения, логи и чужие зоны.

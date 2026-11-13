@@ -10,6 +10,8 @@ from dossier.service import DatasetUnavailable, HouseNotFound
 
 _logger = get_logger("api.errors", service="api")
 
+ERROR_HEADER = "X-DomDossier-Error"
+
 
 class InvalidRequestError(Exception):
     """Некорректный запрос клиента."""
@@ -18,6 +20,18 @@ class InvalidRequestError(Exception):
 def error_body(code: str, message: str) -> dict:
     """Собрать тело ошибки в едином формате."""
     return {"error": {"code": code, "message": message}}
+
+
+def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
+    """Ответ-ошибка: тело error_body и тот же код в заголовке ERROR_HEADER.
+
+    Заголовок читает frontend nginx, не разбирая тело ответа api.
+    """
+    return JSONResponse(
+        status_code=status_code,
+        content=error_body(code, message),
+        headers={ERROR_HEADER: code},
+    )
 
 
 async def _dataset_unavailable_handler(
@@ -30,10 +44,7 @@ async def _dataset_unavailable_handler(
         reason="dataset_unavailable",
         error_type=type(exc).__name__,
     )
-    return JSONResponse(
-        status_code=503,
-        content=error_body("dataset_unavailable", "utility rating dataset is unavailable"),
-    )
+    return _error_response(503, "dataset_unavailable", "utility rating dataset is unavailable")
 
 
 async def _scoring_unavailable_handler(
@@ -46,10 +57,7 @@ async def _scoring_unavailable_handler(
         reason="scoring_unavailable",
         error_type=type(exc).__name__,
     )
-    return JSONResponse(
-        status_code=503,
-        content=error_body("scoring_unavailable", "utility rating scoring is unavailable"),
-    )
+    return _error_response(503, "scoring_unavailable", "utility rating scoring is unavailable")
 
 
 async def _house_not_found_handler(
@@ -62,10 +70,7 @@ async def _house_not_found_handler(
         reason="house_not_found",
         error_type=type(exc).__name__,
     )
-    return JSONResponse(
-        status_code=404,
-        content=error_body("house_not_found", "house is not in the pilot sample"),
-    )
+    return _error_response(404, "house_not_found", "house is not in the pilot sample")
 
 
 async def _invalid_request_handler(
@@ -78,10 +83,7 @@ async def _invalid_request_handler(
         reason="invalid_request",
         error_type=type(exc).__name__,
     )
-    return JSONResponse(
-        status_code=422,
-        content=error_body("invalid_request", str(exc) or "invalid request"),
-    )
+    return _error_response(422, "invalid_request", str(exc) or "invalid request")
 
 
 async def _validation_error_handler(
@@ -94,10 +96,7 @@ async def _validation_error_handler(
         reason="invalid_request",
         error_type=type(exc).__name__,
     )
-    return JSONResponse(
-        status_code=422,
-        content=error_body("invalid_request", "request parameters are invalid"),
-    )
+    return _error_response(422, "invalid_request", "request parameters are invalid")
 
 
 async def _unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -108,10 +107,7 @@ async def _unhandled_error_handler(request: Request, exc: Exception) -> JSONResp
         reason="unhandled_exception",
         error_type=type(exc).__name__,
     )
-    return JSONResponse(
-        status_code=500,
-        content=error_body("internal_error", "internal server error"),
-    )
+    return _error_response(500, "internal_error", "internal server error")
 
 
 def register_error_handlers(app: FastAPI) -> None:
