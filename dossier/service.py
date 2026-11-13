@@ -5,12 +5,15 @@ from dataclasses import dataclass
 
 from contract.utility_rating import CityRating, House, HouseRating, TimeWindow
 from core.config import Settings
+from core.logging import get_logger
 from sources.utility_rating_json import (
     UtilityRatingLoadError,
     load_utility_rating_files,
 )
 from utility_rating.dataset import parse_dataset
 from utility_rating.scoring import score_city
+
+_logger = get_logger("dossier.service", service="api")
 
 
 class DatasetUnavailable(Exception):
@@ -42,14 +45,34 @@ class UtilityRatingService:
         """Вернуть снимок, при необходимости загрузив и рассчитав данные."""
         with self._lock:
             if self._snapshot is not None:
+                _logger.info(
+                    "SNAPSHOT_CACHE_HIT", "snapshot cache hit", cache_state="hit"
+                )
                 return self._snapshot
+            _logger.info("SNAPSHOT_LOAD_STARTED", "snapshot load started")
             try:
                 raw, schema = load_utility_rating_files(
                     self._settings.dataset_path, self._settings.schema_path
                 )
                 dataset = parse_dataset(raw, schema)
                 rating = score_city(dataset)
-            except (UtilityRatingLoadError, TypeError, ValueError) as exc:
+            except UtilityRatingLoadError as exc:
+                _logger.error(
+                    "SNAPSHOT_LOAD_FAILED",
+                    "snapshot load failed",
+                    reason="source_read_failed",
+                    error_type=type(exc).__name__,
+                )
+                raise DatasetUnavailable(
+                    "utility rating dataset is unavailable"
+                ) from exc
+            except (TypeError, ValueError) as exc:
+                _logger.error(
+                    "SNAPSHOT_LOAD_FAILED",
+                    "snapshot load failed",
+                    reason="dataset_invalid",
+                    error_type=type(exc).__name__,
+                )
                 raise DatasetUnavailable(
                     "utility rating dataset is unavailable"
                 ) from exc
@@ -57,6 +80,12 @@ class UtilityRatingService:
                 houses=dataset.houses, window=dataset.window, rating=rating
             )
             self._snapshot = snapshot
+            _logger.info(
+                "SNAPSHOT_READY",
+                "snapshot ready",
+                house_count=len(dataset.houses),
+                event_count=len(dataset.events),
+            )
             return snapshot
 
     def get_house(self, house_id: str) -> tuple[House, HouseRating]:
@@ -65,4 +94,5 @@ class UtilityRatingService:
         for house in snapshot.houses:
             if house.house_id == house_id:
                 return house, snapshot.rating.ratings[house_id]
+        _logger.warning("HOUSE_NOT_FOUND", "house not found", house_id=house_id)
         raise HouseNotFound("house is not in the pilot sample")

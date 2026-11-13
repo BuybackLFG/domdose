@@ -4,7 +4,10 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from core.logging import get_logger
 from dossier.service import DatasetUnavailable, HouseNotFound
+
+_logger = get_logger("api.errors", service="api")
 
 
 class InvalidRequestError(Exception):
@@ -19,6 +22,13 @@ def error_body(code: str, message: str) -> dict:
 async def _dataset_unavailable_handler(
     request: Request, exc: DatasetUnavailable
 ) -> JSONResponse:
+    _logger.error(
+        "HTTP_ERROR_RETURNED",
+        "http error returned",
+        status_code=503,
+        reason="dataset_unavailable",
+        error_type=type(exc).__name__,
+    )
     return JSONResponse(
         status_code=503,
         content=error_body("dataset_unavailable", "utility rating dataset is unavailable"),
@@ -28,6 +38,13 @@ async def _dataset_unavailable_handler(
 async def _house_not_found_handler(
     request: Request, exc: HouseNotFound
 ) -> JSONResponse:
+    _logger.error(
+        "HTTP_ERROR_RETURNED",
+        "http error returned",
+        status_code=404,
+        reason="house_not_found",
+        error_type=type(exc).__name__,
+    )
     return JSONResponse(
         status_code=404,
         content=error_body("house_not_found", "house is not in the pilot sample"),
@@ -37,6 +54,13 @@ async def _house_not_found_handler(
 async def _invalid_request_handler(
     request: Request, exc: InvalidRequestError
 ) -> JSONResponse:
+    _logger.error(
+        "HTTP_ERROR_RETURNED",
+        "http error returned",
+        status_code=422,
+        reason="invalid_request",
+        error_type=type(exc).__name__,
+    )
     return JSONResponse(
         status_code=422,
         content=error_body("invalid_request", str(exc) or "invalid request"),
@@ -46,9 +70,30 @@ async def _invalid_request_handler(
 async def _validation_error_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
+    _logger.error(
+        "HTTP_ERROR_RETURNED",
+        "http error returned",
+        status_code=422,
+        reason="invalid_request",
+        error_type=type(exc).__name__,
+    )
     return JSONResponse(
         status_code=422,
         content=error_body("invalid_request", "request parameters are invalid"),
+    )
+
+
+async def _unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    _logger.error(
+        "HTTP_REQUEST_FAILED",
+        "unhandled request failure",
+        status_code=500,
+        reason="unhandled_exception",
+        error_type=type(exc).__name__,
+    )
+    return JSONResponse(
+        status_code=500,
+        content=error_body("internal_error", "internal server error"),
     )
 
 
@@ -58,3 +103,4 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(HouseNotFound, _house_not_found_handler)
     app.add_exception_handler(InvalidRequestError, _invalid_request_handler)
     app.add_exception_handler(RequestValidationError, _validation_error_handler)
+    app.add_exception_handler(Exception, _unhandled_error_handler)

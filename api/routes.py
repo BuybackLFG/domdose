@@ -17,9 +17,11 @@ from api.schemas import (
     Window,
 )
 from contract.utility_rating import UtilityCategory
+from core.logging import get_logger
 from dossier.service import UtilityRatingService
 
 router = APIRouter(prefix="/api")
+_logger = get_logger("api.routes", service="api")
 
 _HOUSE_ID_PATTERN = re.compile(r"^house_[0-9]{6}$")
 
@@ -41,7 +43,8 @@ def get_health() -> dict:
 @router.get("/ready")
 def get_ready(request: Request) -> dict:
     """Проверка готовности: датасет загружается и считается."""
-    _get_service(request).load_snapshot()
+    snapshot = _get_service(request).load_snapshot()
+    _logger.info("API_READY", "api ready", house_count=len(snapshot.houses))
     return {"status": "ready"}
 
 
@@ -57,6 +60,7 @@ def list_houses(request: Request) -> HouseListResponse:
         )
         for house in snapshot.houses
     ]
+    _logger.info("API_HOUSES_LISTED", "houses listed", house_count=len(houses))
     return HouseListResponse(
         scope=_scope(),
         window=Window(start=snapshot.window.start, end=snapshot.window.end),
