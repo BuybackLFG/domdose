@@ -6,7 +6,8 @@ import { PILOT_MAP } from './map/pilotMap';
 import type { HouseId, HouseSummary } from './types';
 
 interface HouseMapProps {
-  houses: HouseSummary[];
+  /** Все дома ответа API; дом без совпадения с каталогом координат считается непоказанным. */
+  houses: readonly HouseSummary[];
   selectedHouseId: HouseId | null;
   onSelectHouse: (houseId: HouseId) => void;
 }
@@ -14,6 +15,27 @@ interface HouseMapProps {
 interface PlacedHouse extends HouseSummary {
   lat: number;
   lon: number;
+}
+
+/** Отступ начального вида от крайних маркеров, px. */
+const MARKER_FIT_PADDING = 32;
+
+/** Доля вида у каждого края, попадание выбранного дома в которую сдвигает карту. */
+const VIEW_EDGE_SHARE = 0.1;
+
+/**
+ * Запас покрытия 2 px с каждой стороны (отрицательный padding getBoundsZoom):
+ * Leaflet не исправляет выход вида за maxBounds до 1 px, и у края оставалась полоса фона.
+ */
+const COVER_OVERSCAN = L.point(-4, -4);
+
+const OVERLAY_BOUNDS = L.latLngBounds(
+  [PILOT_MAP.southWest.lat, PILOT_MAP.southWest.lng],
+  [PILOT_MAP.northEast.lat, PILOT_MAP.northEast.lng],
+);
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 function markerIcon(selected: boolean): L.DivIcon {
@@ -25,10 +47,47 @@ function markerIcon(selected: boolean): L.DivIcon {
   });
 }
 
+/**
+ * Ставит minZoom равным зуму, при котором подложка покрывает весь контейнер.
+ * getBoundsZoom ограничен текущим minZoom снизу, поэтому он сначала сбрасывается:
+ * иначе при сужении контейнера минимум не уменьшится. Возвращает false без размера.
+ */
+function applyCoverMinZoom(map: L.Map): boolean {
+  const size = map.getSize();
+  if (size.x === 0 || size.y === 0) return false;
+  map.setMinZoom(0);
+  map.setMinZoom(map.getBoundsZoom(OVERLAY_BOUNDS, true, COVER_OVERSCAN));
+  return true;
+}
+
+/**
+ * Вписывает вид во все маркеры с отступом; зум не ниже покрывающего minZoom.
+ * Без измеренного контейнера возвращает false: зум вписывания там не определён.
+ */
+function fitToHouses(map: L.Map, houses: readonly PlacedHouse[]): boolean {
+  if (houses.length === 0 || !applyCoverMinZoom(map)) return false;
+  const size = map.getSize();
+  if (size.x <= 2 * MARKER_FIT_PADDING || size.y <= 2 * MARKER_FIT_PADDING) return false;
+  map.fitBounds(
+    L.latLngBounds(houses.map((house): L.LatLngTuple => [house.lat, house.lon])),
+    { padding: [MARKER_FIT_PADDING, MARKER_FIT_PADDING], animate: false },
+  );
+  return true;
+}
+
+/** Сдвигает вид к выбранному дому, только если он вне вида или у самого края. */
+function revealHouse(map: L.Map, house: PlacedHouse | undefined, animate: boolean): void {
+  if (!house || map.getBounds().pad(-VIEW_EDGE_SHARE).contains([house.lat, house.lon])) return;
+  map.panTo([house.lat, house.lon], { animate });
+}
+
 export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<HouseId, L.Marker>>(new Map());
+  const placedRef = useRef<readonly PlacedHouse[]>([]);
+  const selectedIdRef = useRef<HouseId | null>(null);
+  const fittedRef = useRef(false);
   const selectRef = useRef(onSelectHouse);
   const [assetError, setAssetError] = useState(false);
   selectRef.current = onSelectHouse;
@@ -43,31 +102,22 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
     }
     return result;
   }, [houses, geoById]);
-
-  const knownCoordinates = useMemo(
-    () => PILOT_HOUSES.filter((house) => house.lat !== null && house.lon !== null).length,
-    [],
-  );
+  const unplacedCount = houses.length - placedHouses.length;
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    const container = containerRef.current;
+    if (!container || mapRef.current) return;
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const southWest: [number, number] = [PILOT_MAP.southWest.lat, PILOT_MAP.southWest.lng];
-    const northEast: [number, number] = [PILOT_MAP.northEast.lat, PILOT_MAP.northEast.lng];
-    const bounds = L.latLngBounds(southWest, northEast);
-
-    const map = L.map(containerRef.current, {
-      center: bounds.getCenter(),
-      zoom: 12,
+    const reduceMotion = prefersReducedMotion();
+    // Вид не выходит за подложку; zoomSnap 0 — покрытие без округления зума вверх.
+    const map = L.map(container, {
       zoomControl: true,
       attributionControl: true,
       keyboard: true,
       scrollWheelZoom: false,
-      minZoom: 11,
       maxZoom: 17,
-      zoomSnap: 0.5,
-      maxBounds: bounds.pad(0.05),
+      zoomSnap: 0,
+      maxBounds: OVERLAY_BOUNDS,
       maxBoundsViscosity: 1,
       zoomAnimation: !reduceMotion,
       fadeAnimation: !reduceMotion,
@@ -78,18 +128,31 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
 
     const overlay = L.imageOverlay(
       PILOT_MAP.imageUrl,
-      bounds,
+      OVERLAY_BOUNDS,
       {
         attribution: PILOT_MAP.attribution,
         interactive: false,
-        alt: 'Карта Владивостока с домами пилотной выборки',
+        alt: 'Карта Владивостока',
       },
     ).addTo(map);
     overlay.on('error', () => setAssetError(true));
-    map.fitBounds(bounds);
 
-    const observer = new ResizeObserver(() => map.invalidateSize());
-    observer.observe(containerRef.current);
+    applyCoverMinZoom(map);
+    map.setView(OVERLAY_BOUNDS.getCenter(), map.getMinZoom(), { animate: false });
+
+    // Размер контейнера может появиться или измениться позже: покрытие и начальный вид
+    // пересчитываются по факту измерения.
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize({ animate: false });
+      if (!applyCoverMinZoom(map)) return;
+      if (!fittedRef.current && fitToHouses(map, placedRef.current)) {
+        fittedRef.current = true;
+        const selected = placedRef.current.find((house) => house.house_id === selectedIdRef.current);
+        revealHouse(map, selected, false);
+      }
+      map.panInsideBounds(OVERLAY_BOUNDS, { animate: false });
+    });
+    observer.observe(container);
     mapRef.current = map;
 
     const markers = markersRef.current;
@@ -99,11 +162,14 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
       markers.clear();
       map.remove();
       mapRef.current = null;
+      fittedRef.current = false;
       setAssetError(false);
     };
   }, []);
 
   useEffect(() => {
+    placedRef.current = placedHouses;
+    selectedIdRef.current = selectedHouseId;
     const map = mapRef.current;
     if (!map) return;
 
@@ -142,26 +208,27 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
       });
     }
 
-    const selected = placedHouses.find((house) => house.house_id === selectedHouseId);
-    if (selected) {
-      map.panTo([selected.lat, selected.lon], {
-        animate: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-      });
+    if (!fittedRef.current) fittedRef.current = fitToHouses(map, placedHouses);
+    if (fittedRef.current) {
+      const selected = placedHouses.find((house) => house.house_id === selectedHouseId);
+      revealHouse(map, selected, !prefersReducedMotion());
     }
   }, [placedHouses, selectedHouseId]);
 
+  // isolate — свой контекст наложения: панели Leaflet (z-index 400–1000) не перекрывают
+  // выпадающие подсказки поиска над картой.
   return (
-    <section aria-labelledby="house-map-heading" className="overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
-      <h2 id="house-map-heading" className="sr-only">Карта пилотной выборки</h2>
-      <div ref={containerRef} className="h-80 w-full sm:h-105 lg:h-120" aria-label="Карта пилотной выборки" />
+    <section aria-labelledby="house-map-heading" className="isolate overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
+      <h2 id="house-map-heading" className="sr-only">Карта домов</h2>
+      <div ref={containerRef} className="h-80 w-full sm:h-105 lg:h-120" aria-label="Карта домов" />
       {assetError && (
         <div role="alert" className="border-t border-danger/30 bg-danger/10 px-4 py-3 text-sm text-text">
           Не удалось загрузить локальную подложку. Список и досье доступны; online fallback не выполняется.
         </div>
       )}
-      {knownCoordinates < PILOT_HOUSES.length && (
-        <p className="border-t border-border px-4 py-3 text-sm font-medium text-warning" role="status">
-          Координаты доступны не для всех домов: {knownCoordinates} из {PILOT_HOUSES.length}.
+      {unplacedCount > 0 && (
+        <p role="status" className="border-t border-border px-4 py-3 text-sm font-medium text-warning">
+          {`Не удалось показать на карте: ${unplacedCount}`}
         </p>
       )}
     </section>

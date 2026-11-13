@@ -1,4 +1,4 @@
-import { formatScore } from './format';
+import { formatAddressCount, formatScore } from './format';
 import type { District } from './pilotHouses';
 import type { HouseId, HouseSummary } from './types';
 
@@ -13,11 +13,13 @@ export function HouseList({ houses, districts, selectedHouseId, onSelect }: Hous
   return (
     <section aria-labelledby="house-list-heading" className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-border sm:p-5">
       <h2 id="house-list-heading" className="text-base font-semibold text-text">
-        Дома пилотной выборки
+        Дома
       </h2>
-      <p className="mt-1 text-sm text-text-secondary">Ровно 20 адресов, включая дома без событий.</p>
+      <p className="mt-1 text-sm text-text-secondary">
+        {formatAddressCount(houses.length)}, включая дома без отключений
+      </p>
 
-      <ul className="mt-4 grid gap-2 lg:grid-cols-2" aria-label="Список адресов пилотной выборки">
+      <ul className="mt-4 grid gap-2 lg:grid-cols-2" aria-label="Список адресов">
         {houses.map((house) => (
           <li key={house.house_id}>
             <button

@@ -5,8 +5,10 @@ interface WeakestCategoryProps {
   detail: HouseDetailResponse;
 }
 
+/** Категория из поля weakest ответа; при всех четырёх оценках 1 блок не показывается. */
 export function WeakestCategory({ detail }: WeakestCategoryProps) {
-  const label = categoryLabel(detail.weakest);
+  const allPerfect = Object.values(detail.categories).every((category) => category.score === 1);
+  if (allPerfect) return null;
 
   return (
     <section aria-labelledby="weakest-heading" className="rounded-2xl border border-warning/30 bg-warning/10 p-4 sm:p-5">
@@ -14,14 +16,10 @@ export function WeakestCategory({ detail }: WeakestCategoryProps) {
         Худшая категория
       </h3>
       <p className="mt-2 text-xl font-semibold text-warning">
-        {label}
+        {categoryLabel(detail.weakest)}
         <span className="ml-2 text-sm font-medium text-text-secondary">
           {formatScore(detail.categories[detail.weakest].score)} / 100
         </span>
-      </p>
-      <p className="mt-2 text-sm leading-6 text-text">
-        Она участвует в ограничении общего рейтинга: итог не выше её оценки + 0,25. Это не
-        отдельная независимая оценка.
       </p>
     </section>
   );

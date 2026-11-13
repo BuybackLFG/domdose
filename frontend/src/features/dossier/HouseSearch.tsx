@@ -47,18 +47,13 @@ export function HouseSearch({
   return (
     <section aria-labelledby="house-search-heading" className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-border sm:p-5">
       <div className="flex flex-col gap-3">
-        <div>
-          <h2 id="house-search-heading" className="text-base font-semibold text-text">
-            Найти дом
-          </h2>
-          <p className="mt-1 text-sm text-text-secondary">
-            Локальный поиск работает только по 20 адресам пилотной выборки.
-          </p>
-        </div>
+        <h2 id="house-search-heading" className="text-base font-semibold text-text">
+          Найти дом
+        </h2>
 
         <form onSubmit={handleSubmit} className="relative">
           <label htmlFor="house-search-input" className="sr-only">
-            Найти адрес в пилотной выборке
+            Найти адрес
           </label>
           <IconSearch size={17} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
           <input
@@ -114,14 +109,14 @@ export function HouseSearch({
         <div aria-live="polite">
           {search.kind === 'not_covered' && (
             <p className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-text">
-              Этот адрес не входит в пилотную выборку из 20 домов. Это не означает отсутствие
-              отключений или плохой рейтинг.
+              Этот адрес не входит в список домов. Это не означает отсутствие отключений или
+              плохой рейтинг.
             </p>
           )}
           {search.kind === 'unsupported_link' && (
             <p className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-text">
-              Ссылки на объявления в MVP не открываются и не проверяются онлайн. Введите адрес
-              текстом из пилотной выборки.
+              Ссылки на объявления пока не открываются и не проверяются онлайн. Введите адрес
+              текстом.
             </p>
           )}
         </div>

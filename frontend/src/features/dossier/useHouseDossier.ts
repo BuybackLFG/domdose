@@ -34,7 +34,7 @@ function publicMessage(error: ClientError): string {
     case 'no_data':
       return 'Исходные данные недоступны. Рейтинг не рассчитан';
     case 'not_found':
-      return 'Дом отсутствует в текущей пилотной выборке';
+      return 'Дом отсутствует в текущем списке домов';
     case 'timeout':
       return 'Не удалось загрузить досье: превышено время ожидания';
     case 'invalid_response':
@@ -120,7 +120,7 @@ export function useHouseDossier() {
     if (!house) {
       setDetail({
         status: 'error',
-        error: new ClientError('not_found', 'Дом отсутствует в текущей пилотной выборке'),
+        error: new ClientError('not_found', 'Дом отсутствует в текущем списке домов'),
       });
       return;
     }
@@ -194,10 +194,6 @@ export function useHouseDossier() {
     });
   }, [selectHouse]);
 
-  const closeSearch = useCallback(() => {
-    setSearch((current) => (current.kind === 'open' ? { ...current } : current));
-  }, []);
-
   const retryList = useCallback(() => {
     setListReloadToken((token) => token + 1);
   }, []);
@@ -226,7 +222,6 @@ export function useHouseDossier() {
     updateQuery,
     moveSearchActive,
     submitSearch,
-    closeSearch,
     retryList,
     retryDetail,
   };

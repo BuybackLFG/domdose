@@ -28,41 +28,27 @@ export function DossierPage() {
     retryDetail,
   } = dossier;
 
-  const geoById = useMemo(() => new Map(PILOT_HOUSES.map((house) => [house.house_id, house])), []);
   const districts = useMemo(
     () => new Map(PILOT_HOUSES.map((house) => [house.house_id, house.district] as const)),
     [],
   );
 
-  const trustedGeoHouses = useMemo(() => {
-    if (list.status !== 'success') return [];
-    return list.data.houses.filter((house) => {
-      const geo = geoById.get(house.house_id);
-      return (
-        geo !== undefined
-        && geo.address === house.address
-        && geo.lat !== null
-        && geo.lon !== null
-      );
-    });
-  }, [geoById, list]);
-
-  const houses = list.status === 'success' ? list.data.houses : [];
+  const houses = useMemo(() => (list.status === 'success' ? list.data.houses : []), [list]);
 
   return (
     <div className="min-h-screen pb-[env(safe-area-inset-bottom)]">
-      <a href="#house-summary" className="skip-link">Перейти к сводке дома</a>
+      <a href="#house-summary-heading" className="skip-link">Перейти к сводке дома</a>
       <a href="#house-list-heading" className="skip-link">Перейти к списку домов</a>
 
       <header className="px-4 pb-5 pt-7 sm:px-6 sm:pt-10">
         <div className="mx-auto max-w-6xl">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">ДомДосье</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-text sm:text-3xl">
-            Коммунальный рейтинг пилотной выборки
+            Коммунальная надёжность домов
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">
-            Приближённый MVP-набор по публичным объявлениям. Рейтинг сравнивает только 20 выбранных
-            домов и не является рейтингом всего Владивостока.
+            Приближённые данные по публичным объявлениям об отключениях. Дома сравниваются между
+            собой, а не со всем Владивостоком.
           </p>
         </div>
       </header>
@@ -78,16 +64,16 @@ export function DossierPage() {
         />
 
         <HouseMap
-          houses={trustedGeoHouses}
+          houses={houses}
           selectedHouseId={selectedHouseId}
           onSelectHouse={selectHouse}
         />
 
         {list.status === 'loading' && (
           <section aria-labelledby="list-loading-heading" className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-border sm:p-5">
-            <h2 id="list-loading-heading" className="sr-only">Загрузка пилотной выборки</h2>
+            <h2 id="list-loading-heading" className="sr-only">Загрузка списка домов</h2>
             <p role="status" className="loading-pulse text-sm font-medium text-text-secondary">
-              Загружаем пилотную выборку…
+              Загружаем дома…
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
               {Array.from({ length: 8 }, (_, index) => (
@@ -122,7 +108,10 @@ export function DossierPage() {
               errorMessage={detailErrorMessage}
               onRetryDetail={retryDetail}
             />
-            {detail.status === 'success' && <HouseEvents detail={detail.data} />}
+            {detail.status === 'success' && (
+              // key сбрасывает фильтр и пагинацию событий при смене дома.
+              <HouseEvents key={detail.data.house_id} events={detail.data.events} />
+            )}
             <CategoryScores detail={detail} />
             {detail.status === 'success' && <WeakestCategory detail={detail.data} />}
           </>

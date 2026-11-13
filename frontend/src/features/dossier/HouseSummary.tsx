@@ -1,4 +1,4 @@
-import { formatDateTime, formatScore } from './format';
+import { formatPeriod, formatScore } from './format';
 import type { Loadable } from './useHouseDossier';
 import type { HouseDetailResponse, HouseSummary as HouseSummaryDto } from './types';
 
@@ -44,10 +44,7 @@ export function HouseSummary({ house, district, detail, errorMessage, onRetryDet
               {formatScore(detail.data.overall_score)}
               <span className="ml-1 text-base font-medium text-text-secondary">/ 100</span>
             </p>
-            <p className="mt-2 text-sm text-text-secondary">
-              Окно расчёта: [{formatDateTime(detail.data.window.start)};{' '}
-              {formatDateTime(detail.data.window.end)}), UTC+10
-            </p>
+            <p className="mt-2 text-sm text-text-secondary">{formatPeriod(detail.data.window)}</p>
           </div>
         )}
 
