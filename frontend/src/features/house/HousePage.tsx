@@ -11,6 +11,7 @@
  * только свои разделы.
  */
 import { BackToSearch } from '../house/BackToSearch'
+import { Disclaimer } from '../dossier/Disclaimer'
 import { DossierHeader } from '../dossier/DossierHeader'
 import { FactsSection } from '../dossier/FactsSection'
 import { IndexPanel } from '../dossier/IndexPanel'
@@ -76,7 +77,7 @@ export function HousePage({ houseId }: { houseId: string }) {
           <DossierHeader dossier={dossier} />
           {/* Дисклеймер обязателен по контракту и показывается дословно:
               это текст из API, а не наш. Вёрстку уточняет F2 (DD-23). */}
-          <p className="text-xs text-slate-500">{dossier.disclaimer}</p>
+          <Disclaimer text={dossier.disclaimer} />
           <IndexPanel index={dossier.index ?? null} />
           <FactsSection facts={dossier.facts ?? []} />
           <EventsSection events={dossier.events ?? []} />
