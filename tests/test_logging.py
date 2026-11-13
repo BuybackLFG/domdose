@@ -172,6 +172,15 @@ def test_environment_config_and_invalid_values(tmp_path, monkeypatch):
         load_logging_settings("api")
 
 
+@pytest.mark.parametrize("service", ("api", "scoring", "legacy"))
+def test_default_path_is_service_execution_log(service, monkeypatch):
+    monkeypatch.delenv("DOMDOSSE_LOG_FILE_PATH")
+
+    settings = load_logging_settings(service)
+
+    assert settings.file_path == REPO_ROOT / "logs" / service / "execution.log"
+
+
 def test_unwritable_log_parent_is_not_silently_replaced_by_stdout(tmp_path, capsys):
     blocker = tmp_path / "blocker"
     blocker.write_text("file", encoding="utf-8")
@@ -180,6 +189,63 @@ def test_unwritable_log_parent_is_not_silently_replaced_by_stdout(tmp_path, caps
         configure("api", blocker / "execution.log", stdout=True)
 
     assert capsys.readouterr().out == ""
+
+
+def test_lazy_auto_setup_repeats_invalid_level_failure(monkeypatch):
+    monkeypatch.setenv("DOMDOSSE_LOG_LEVEL", "INVALID")
+    logger = get_logger("api.main", service="api")
+
+    for _ in range(2):
+        with pytest.raises((ValueError, RuntimeError)):
+            logger.info("API_APP_CREATED", "created")
+
+
+def test_lazy_auto_setup_repeats_unwritable_path_failure(tmp_path, monkeypatch):
+    blocker = tmp_path / "blocker"
+    blocker.write_text("file", encoding="utf-8")
+    monkeypatch.setenv("DOMDOSSE_LOG_FILE_PATH", str(blocker / "execution.log"))
+    logger = get_logger("api.main", service="api")
+
+    for _ in range(2):
+        with pytest.raises((OSError, RuntimeError)):
+            logger.info("API_APP_CREATED", "created")
+
+
+def test_create_app_fails_fast_on_invalid_logging_config(tmp_path, monkeypatch):
+    monkeypatch.setenv("DOMDOSSE_LOG_LEVEL", "INVALID")
+
+    with pytest.raises((ValueError, RuntimeError)):
+        api_cases.create_app(api_settings(tmp_path))
+
+
+def test_legacy_main_fails_fast_on_invalid_logging_config(tmp_path, monkeypatch):
+    monkeypatch.setenv("DOMDOSSE_LOG_LEVEL", "INVALID")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "legacy_dataset.py",
+            "--legacy", str(tmp_path / "missing-legacy.json"),
+            "--current", str(tmp_path / "missing-current.json"),
+            "--output", str(tmp_path / "output.json"),
+        ],
+    )
+
+    with pytest.raises(ValueError):
+        legacy_cases.main()
+
+
+def test_autouse_fixture_drives_real_auto_setup_to_unique_tmp_file(
+    isolated_execution_log,
+):
+    settings = load_logging_settings("api")
+    assert settings.file_path == isolated_execution_log
+    assert settings.stdout is False
+
+    get_logger("api.routes", service="api").info("API_READY", "ready", house_count=20)
+
+    assert isolated_execution_log.is_file()
+    assert event(isolated_execution_log, "API_READY")["house_count"] == 20
 
 
 def test_metadata_is_json_unicode_single_line_and_validated(tmp_path):
@@ -285,6 +351,11 @@ def test_legacy_skip_counters_and_no_plain_print(tmp_path, monkeypatch, capsys):
     assert skipped["outside_window_count"] == 3
     assert skipped["missing_end_count"] == 1
     assert skipped["unmatched_address_count"] == 0
+    summary = event(log_path, "LEGACY_RATING_SUMMARY")
+    assert summary["hot_water_count"] == 0
+    assert summary["cold_water_count"] == 0
+    assert summary["electricity_count"] == 2
+    assert summary["heating_count"] == 0
 
 
 def test_run_directory_uses_utc_name_and_rejects_collision(tmp_path):
