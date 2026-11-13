@@ -80,6 +80,15 @@ jobs:
           curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://localhost/ -o /tmp/domdose-index.html
           grep -qi '<!doctype html>' /tmp/domdose-index.html
           curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://localhost/api/health | python3 -c 'import json, sys; assert json.load(sys.stdin) == {"status": "ok"}'
+          # /api/health живёт вне префикса и проходит даже при срезанном префиксе.
+          # Поэтому отдельно проверяем реальный эндпоинт под /api: 501 значит, что
+          # запрос дошёл до роутера, 404 — что nginx сломал путь.
+          status=$(curl -s -o /tmp/domdose-houses.json -w '%{http_code}' --retry 10 --retry-connrefused --retry-delay 1 http://localhost/api/houses)
+          echo "GET /api/houses -> $status"
+          if [ "$status" != "200" ] && [ "$status" != "501" ]; then
+            echo "путь /api/* не дошёл до backend (status $status)" >&2
+            exit 1
+          fi
       - name: Логи при ошибке
         if: failure()
         run: docker compose -f docker-compose.prod.yml logs --no-color

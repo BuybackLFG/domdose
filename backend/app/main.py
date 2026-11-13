@@ -15,7 +15,7 @@ from app.core.config import get_settings
 from schemas import ErrorResponse
 
 API_PREFIX = "/api"
-"""Префикс публичного API. nginx в проде срезает `/api` перед проксированием."""
+"""Префикс публичного API. nginx в проде проксирует `/api/*` как есть, без среза."""
 
 
 def create_app() -> FastAPI:
@@ -40,7 +40,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # /health — для Docker/Caddy (внутренний healthcheck, идёт напрямую в backend).
+    # /api/health — тот же ответ для внешнего контракта: снаружи всё живёт под /api.
+    # В OpenAPI не попадает: это операционная ручка, а не часть контракта API.
     app.include_router(health_router)
+    app.include_router(health_router, prefix=API_PREFIX, include_in_schema=False)
     app.include_router(houses_router, prefix=API_PREFIX)
     app.include_router(compare_router, prefix=API_PREFIX)
     app.include_router(reports_router, prefix=API_PREFIX)
