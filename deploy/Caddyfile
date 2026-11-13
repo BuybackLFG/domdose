@@ -1,0 +1,33 @@
+# Caddy: TLS-терминация и reverse proxy на frontend (nginx).
+# Переменные DOMAIN и ACME_EMAIL подставляет docker compose из .env.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Healthcheck снаружи, без захода в SPA.
+	handle /health {
+		respond "ok" 200
+	}
+
+	# Всё остальное — на фронтенд-контейнер; /api он проксирует в backend.
+	handle {
+		reverse_proxy frontend:80
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

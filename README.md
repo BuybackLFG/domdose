@@ -4,7 +4,8 @@ MVP для вайботона: досье на дом из открытых да
 
 Репозиторий: https://github.com/BuybackLFG/domdose
 Работаем через PR в `main`. Локальная проверка `./scripts/check.sh` обязательна
-до PR, CI повторяет её же. Деплой пока не настроен.
+до PR, CI повторяет её же. Деплой — на VPS через `docker-compose.prod.yml`,
+см. [`deploy/README.md`](deploy/README.md).
 
 ## Структура
 
@@ -61,6 +62,12 @@ cd backend && uv run seeded
 ```
 
 Читает `data/seed/*.json`. Пока каталог пуст — заглушки для задачи про модель данных.
+
+## Стек и деплой
+
+- backend: FastAPI + Python 3.12, frontend: React + Vite + TS + Tailwind.
+- Прод: VPS, `docker-compose.prod.yml` (Caddy → nginx → uvicorn). См. `deploy/README.md`.
+- CI проверяет код на каждый push/PR; выкатка на сервер — вручную (`git pull` + `compose up -d --build`).
 
 ## Правила
 

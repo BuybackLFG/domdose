@@ -1,0 +1,75 @@
+name: domdose
+
+# Прод-стек для VPS: Caddy (TLS + reverse proxy) -> frontend (nginx) -> backend (uvicorn).
+# Запуск на сервере: docker compose -f docker-compose.prod.yml up -d --build
+# Локальная проверка: docker compose -f docker-compose.prod.yml up -d --build,
+#   затем curl -H "Host: localhost" http://127.0.0.1/health
+
+services:
+  backend:
+    build:
+      context: ./backend
+    image: domdose-backend:latest
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////data/domdose.db}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://domdose.ru}
+    volumes:
+      - db-data:/data
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').status==200 else 1)"
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - web
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    image: domdose-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "80"
+    networks:
+      - web
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - web
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  web:
+    driver: bridge
