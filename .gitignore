@@ -31,6 +31,11 @@ logs/
 dataset/*.json
 !dataset/utility-rating-dataset.schema.json
 dataset/output/*.json
+/output/
+
+# Map preparation inputs and intermediates
+*.osm.pbf
+map-preparation/*.json
 
 # Editors and OS
 .idea/

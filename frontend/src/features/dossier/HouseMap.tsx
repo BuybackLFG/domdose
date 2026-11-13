@@ -50,7 +50,7 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
   );
 
   useEffect(() => {
-    if (!PILOT_MAP.prepared || !containerRef.current || mapRef.current) return;
+    if (!containerRef.current || mapRef.current) return;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const southWest: [number, number] = [PILOT_MAP.southWest.lat, PILOT_MAP.southWest.lng];
@@ -73,6 +73,8 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
       fadeAnimation: !reduceMotion,
       markerZoomAnimation: !reduceMotion,
     });
+    // Prefix Leaflet по умолчанию содержит внешнюю ссылку; attribution — только текст manifest.
+    map.attributionControl.setPrefix(false);
 
     const overlay = L.imageOverlay(
       PILOT_MAP.imageUrl,
@@ -103,7 +105,7 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !PILOT_MAP.prepared) return;
+    if (!map) return;
 
     const nextIds = new Set(placedHouses.map((house) => house.house_id));
     for (const [houseId, marker] of markersRef.current) {
@@ -147,26 +149,6 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
       });
     }
   }, [placedHouses, selectedHouseId]);
-
-  if (!PILOT_MAP.prepared) {
-    return (
-      <section aria-labelledby="house-map-heading" className="overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
-        <h2 id="house-map-heading" className="sr-only">Карта пилотной выборки</h2>
-        <div className="flex min-h-80 flex-col items-center justify-center gap-3 bg-surface-subtle px-4 py-12 text-center">
-          <p className="text-base font-semibold text-text">Локальная карта не подготовлена</p>
-          <p className="max-w-md text-sm leading-6 text-text-secondary">
-            Online tiles и fallback запрещены. Подложка, geographic bounds и attribution должны быть
-            подготовлены локальным map-пакетом. Список и досье продолжают работать без карты.
-          </p>
-        </div>
-        <div className="border-t border-border px-4 py-3">
-          <p className="text-sm font-medium text-warning" role="status">
-            Координаты доступны не для всех домов: {knownCoordinates} из {PILOT_HOUSES.length}.
-          </p>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section aria-labelledby="house-map-heading" className="overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">

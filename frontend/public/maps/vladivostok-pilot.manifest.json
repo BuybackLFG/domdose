@@ -1,0 +1,104 @@
+{
+  "image": "/maps/vladivostok-pilot.png",
+  "crs": "EPSG:3857",
+  "width": 2048,
+  "height": 2692,
+  "bounds": {
+    "south": 43.08714411460467,
+    "west": 131.8530462707382,
+    "north": 43.2917054836412,
+    "east": 132.0664957292618
+  },
+  "projected_bounds": {
+    "min_x": 14677813.970400516,
+    "min_y": 5325245.490191652,
+    "max_x": 14701575.05543346,
+    "max_y": 5356478.322666596
+  },
+  "image_sha256": "23f345c5d080ed916bd73bc525641ee190cd82945d496164a7e91bfdce8dd775",
+  "attribution": "© OpenStreetMap contributors",
+  "license": "ODbL-1.0",
+  "license_url": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "source": {
+    "pbf_name": "far-eastern-fed-district-260712.osm.pbf",
+    "pbf_sha256": "e7e76f0f9f30d121eb07385af96a4332d9d10030a220e95bd40773aa0a7351f4",
+    "pbf_size_bytes": 381277609
+  },
+  "commands": [
+    "py -3.13 -m venv map-preparation\\.venv",
+    "map-preparation\\.venv\\Scripts\\python.exe -m pip install -r requirements-map.txt",
+    "map-preparation\\.venv\\Scripts\\python.exe map-preparation\\extract_region.py <PBF> 131.848 43.0835 132.0715 43.2954 map-preparation\\region.json",
+    "map-preparation\\.venv\\Scripts\\python.exe map-preparation\\render_map.py map-preparation\\region.json frontend\\src\\features\\dossier\\pilotHouses.ts <PBF> output\\maps\\vladivostok-pilot.png output\\maps\\vladivostok-pilot.manifest.json --font <FONT_REGULAR> --font-bold <FONT_BOLD>"
+  ],
+  "tools": {
+    "python": "3.13.7",
+    "osmium": "4.3.2",
+    "shapely": "2.2.0",
+    "pillow": "13.0.0",
+    "numpy": "2.5.4",
+    "fonts": [
+      {
+        "role": "regular",
+        "file": "arial.ttf",
+        "sha256": "edfbd22a3d088fc2f5d7c79b8c9c732df6dc878a60f0a80be0f92a3c7a634404"
+      },
+      {
+        "role": "bold",
+        "file": "arialbd.ttf",
+        "sha256": "4d59199834e7439c67ea4949407639961060b21b173833f566eb60ac6fd8f5af"
+      }
+    ]
+  },
+  "known_approximations": [
+    "Учтены только OSM way; мультиполигоны (relations) зданий, водоёмов и зелени не отрисованы, часть крупных объектов может отсутствовать.",
+    "Площадные way без замыкания пропущены; их число указано в render_notes.",
+    "Суша/вода определяется направлением coastline (суша слева); при разрывах coastline внутри рамки возможны локальные ошибки заливки.",
+    "Вся зелень (парки, леса, газоны, пляжи) одним тоном.",
+    "Ширина дорог картографическая по классу, не в масштабе; пешеходные дорожки, лестницы, тропы и грунтовки - тонкой линией без обводки.",
+    "Подписи: не более одной на имя улицы, без пересечений; часть имён не поместилась и не подписана; типовые слова сокращены (ул., просп.).",
+    "Координаты домов в каталоге приближённы (центроид здания OSM или данные владельца) и не являются геодезическими точками входов.",
+    "Один растр 2048 px по ширине рамки без уровней приближения: детализация ограничена масштабом изображения."
+  ],
+  "render_notes": {
+    "projection": "Web Mercator, сфера R=6378137 м, y растёт к северу",
+    "frame": "крайние 20 домов + 1500 м EPSG:3857; по y подгонка до целой высоты в px (менее 0,5 px)",
+    "meters_per_pixel_epsg3857": 11.60209230124201,
+    "ground_meters_per_pixel_at_center": 8.459027060382377,
+    "supersampling": 2,
+    "extract_bbox": "131.848 43.0835 132.0715 43.2954",
+    "region_json_sha256": "eb14901623d19f3af24cda017a9a0c1d558b9605865b0761c54769386b553d44",
+    "coastline": {
+      "faces": 9,
+      "by_votes": 9,
+      "by_seed": 0,
+      "by_default": 0,
+      "mixed_votes": 0,
+      "seed_conflicts": 0,
+      "open_ends": 0,
+      "land_area_share": 0.5383
+    },
+    "drawn": {
+      "green": 9667,
+      "water_areas": 100,
+      "buildings": 69561,
+      "skipped_open_areas": 50,
+      "roads_major": 31435,
+      "roads_minor": 29032,
+      "place_labels": 20,
+      "street_names": 989,
+      "street_labels": 84
+    },
+    "road_width": "картографическая по классу дороги, не метрическая",
+    "street_abbreviations": {
+      "улица": "ул.",
+      "проспект": "просп.",
+      "переулок": "пер.",
+      "бульвар": "бул.",
+      "шоссе": "ш.",
+      "набережная": "наб.",
+      "площадь": "пл.",
+      "проезд": "пр-д",
+      "тупик": "туп."
+    }
+  }
+}
