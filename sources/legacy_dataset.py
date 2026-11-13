@@ -14,8 +14,11 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from core.logging import ServiceName, get_logger, load_logging_settings, setup_logging
 from utility_rating.dataset import parse_dataset
 from utility_rating.scoring import score_city
+
+_logger = get_logger("sources.legacy_dataset", service="legacy")
 
 _TZ = timezone(timedelta(hours=10))
 _SCHEMA_NAME = "utility-rating-dataset.schema.json"
@@ -83,11 +86,20 @@ def _load_json(path: Path) -> dict:
         return json.load(handle)
 
 
-def build_dataset(legacy_records: list, current_draft: dict) -> dict:
+def _count_skip(stats: dict | None, key: str) -> None:
+    """Увеличить счётчик пропуска записи без изменения результата сборки."""
+    if stats is not None:
+        stats[key] = stats.get(key, 0) + 1
+
+
+def build_dataset(
+    legacy_records: list, current_draft: dict, stats: dict | None = None
+) -> dict:
     """Собрать датасет опубликованной схемы из legacy-событий и текущего draft.
 
     Houses, window и registry-поля берутся из draft; его events не используются.
     coverage принудительно complete по решению владельца для приближённого MVP.
+    Необязательный stats заполняется счётчиками пропущенных записей.
     """
     window_start = _parse_naive_local(current_draft["window"]["start"])
     window_end = _parse_naive_local(current_draft["window"]["end"])
@@ -107,12 +119,15 @@ def build_dataset(legacy_records: list, current_draft: dict) -> dict:
         # полуоткрытое окно [start, end): событие входит при start < window_end
         # и (end is None или end > window_start); end null запись пропускается
         if not started < window_end:
+            _count_skip(stats, "outside_window")
             continue
         raw_end = record.get("end")
         if raw_end is None:
+            _count_skip(stats, "missing_end")
             continue
         ended = _parse_naive_local(raw_end)
         if not ended > window_start:
+            _count_skip(stats, "outside_window")
             continue
 
         old_houses = record.get("houses") or []
@@ -124,6 +139,7 @@ def build_dataset(legacy_records: list, current_draft: dict) -> dict:
             )
             house_ids.extend(address_index.get(key, ()))
         if not house_ids:
+            _count_skip(stats, "unmatched")
             continue
 
         declared_n = record.get("declared_n")
@@ -239,8 +255,8 @@ def write_output(dataset: dict, output_path: Path, force: bool = False) -> None:
         raise
 
 
-def _print_stats(dataset: dict, raw: dict, schema: dict) -> None:
-    """Проверить датасет через parse_dataset + score_city и напечатать сводку."""
+def _log_rating_summary(dataset: dict, raw: dict, schema: dict) -> None:
+    """Проверить датасет через parse_dataset + score_city и записать сводку."""
     parsed = parse_dataset(raw, schema)
     rating = score_city(parsed)
     counts = {name: 0 for name in _CATEGORY_ORDER}
@@ -249,21 +265,41 @@ def _print_stats(dataset: dict, raw: dict, schema: dict) -> None:
         counts[event["category"]] += 1
         affected.add(event["house_id"])
     scores = [item.overall_score for item in rating.ratings.values()]
-    good = sum(1 for score in scores if score >= 0.8)
-    medium = sum(1 for score in scores if 0.4 <= score < 0.8)
-    bad = sum(1 for score in scores if score < 0.4)
-    print(f"events: {len(dataset['events'])}")
-    for name in _CATEGORY_ORDER:
-        print(f"  {name}: {counts[name]}")
-    print(f"affected houses: {len(affected)} / {len(dataset['houses'])}")
-    print(f"overall distribution: good={good} medium={medium} bad={bad}")
-    print(
-        f"overall min={min(scores):.4f} max={max(scores):.4f} "
-        f"distinct={len(set(scores))}"
+    _logger.info(
+        "LEGACY_RATING_SUMMARY",
+        "rating summary",
+        event_count=len(dataset["events"]),
+        affected_house_count=len(affected),
+        house_count=len(dataset["houses"]),
+        hot_water_count=counts["hot_water"],
+        cold_water_count=counts["cold_water"],
+        electricity_count=counts["electricity"],
+        heating_count=counts["heating"],
+        good_count=sum(1 for score in scores if score >= 0.8),
+        medium_count=sum(1 for score in scores if 0.4 <= score < 0.8),
+        bad_count=sum(1 for score in scores if score < 0.4),
+        min_score=round(min(scores), 4),
+        max_score=round(max(scores), 4),
+        distinct_score_count=len(set(scores)),
     )
 
 
+def _adaptation_reason(exc: BaseException) -> str:
+    """Код причины отказа адаптации без путей и исходного текста ошибки."""
+    if isinstance(exc, FileNotFoundError):
+        return "file_not_found"
+    if isinstance(exc, (json.JSONDecodeError, UnicodeDecodeError)):
+        return "invalid_json"
+    if isinstance(exc, FileExistsError):
+        return "output_exists"
+    if isinstance(exc, ValueError):
+        return "validation_failed"
+    return "adaptation_failed"
+
+
 def main() -> None:
+    """Точка входа адаптера: fail-fast настройка журнала до чтения файлов."""
+    setup_logging(load_logging_settings(ServiceName.LEGACY))
     parser = argparse.ArgumentParser(
         description="Адаптировать legacy events_parsed.json в датасет скоринга."
     )
@@ -274,14 +310,46 @@ def main() -> None:
     parser.add_argument("--force", action="store_true", help="разрешить перезапись output")
     args = parser.parse_args()
 
-    schema_path = args.schema or args.current.parent / _SCHEMA_NAME
-    legacy_records = _load_json(args.legacy)
-    current_draft = _load_json(args.current)
-    dataset = build_dataset(legacy_records, current_draft)
-    schema = _load_json(schema_path)
-    _print_stats(dataset, dataset, schema)
-    write_output(dataset, args.output, force=args.force)
-    print(f"written: {args.output}")
+    try:
+        schema_path = args.schema or args.current.parent / _SCHEMA_NAME
+        legacy_records = _load_json(args.legacy)
+        current_draft = _load_json(args.current)
+        stats: dict = {}
+        dataset = build_dataset(legacy_records, current_draft, stats=stats)
+        schema = _load_json(schema_path)
+        outside_window = stats.get("outside_window", 0)
+        missing_end = stats.get("missing_end", 0)
+        unmatched = stats.get("unmatched", 0)
+        _logger.info(
+            "LEGACY_DATASET_BUILT",
+            "dataset built",
+            input_record_count=len(legacy_records),
+            output_event_count=len(dataset["events"]),
+        )
+        _logger.info(
+            "LEGACY_RECORDS_SKIPPED",
+            "records skipped",
+            skipped_count=outside_window + missing_end + unmatched,
+            outside_window_count=outside_window,
+            missing_end_count=missing_end,
+            unmatched_address_count=unmatched,
+        )
+        _log_rating_summary(dataset, dataset, schema)
+        write_output(dataset, args.output, force=args.force)
+        _logger.info(
+            "LEGACY_OUTPUT_WRITTEN",
+            "output written",
+            file_name=args.output.name,
+            event_count=len(dataset["events"]),
+        )
+    except Exception as exc:
+        _logger.error(
+            "LEGACY_ADAPTATION_FAILED",
+            "adaptation failed",
+            reason=_adaptation_reason(exc),
+            error_type=type(exc).__name__,
+        )
+        raise
 
 
 if __name__ == "__main__":
