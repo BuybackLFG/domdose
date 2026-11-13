@@ -66,3 +66,11 @@ export function summarizeComponents(components: readonly Component[]): Component
 
   return { rows, totalWeight: rows.reduce((sum, row) => sum + row.weight, 0) }
 }
+
+/** Все компоненты с минимальной достоверной оценкой; равные оценки не скрываем. */
+export function weakestComponents(rows: readonly ComponentRow[]): ComponentRow[] {
+  const valid = rows.filter((row) => Number.isFinite(row.score) && row.score >= 0 && row.score <= 100)
+  if (valid.length === 0) return []
+  const minimum = Math.min(...valid.map((row) => row.score))
+  return valid.filter((row) => row.score === minimum)
+}

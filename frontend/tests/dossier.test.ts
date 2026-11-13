@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { summarizeComponents } from '../src/features/dossier/componentsSummary.ts'
+import { summarizeComponents, weakestComponents } from '../src/features/dossier/componentsSummary.ts'
 import { groupFacts, sourceHost } from '../src/features/dossier/factGroups.ts'
 import { formatWeight } from '../src/lib/format.ts'
 import type { Component, Fact } from '../src/types'
@@ -114,4 +114,14 @@ test('sourceHost: отдаёт хост без www и не падает на б�
   assert.equal(sourceHost('https://www.vl.ru/off/management-company/51.html'), 'vl.ru')
   assert.equal(sourceHost('https://openaddress.ru/houses/abc'), 'openaddress.ru')
   assert.equal(sourceHost('не-url'), 'не-url')
+})
+
+
+test('weakestComponents: учитывает равные минимумы и отсутствие корректных оценок', () => {
+  const rows = summarizeComponents(FIVE).rows
+  assert.deepEqual(weakestComponents(rows).map((row) => row.key), ['transport'])
+  const ties = summarizeComponents([component('nature', 'Природа', 44, 0.5), component('transport', 'Транспорт', 44, 0.5)]).rows
+  assert.deepEqual(weakestComponents(ties).map((row) => row.key), ['nature', 'transport'])
+  assert.deepEqual(weakestComponents([]), [])
+  assert.deepEqual(weakestComponents(summarizeComponents([component('building', 'Дом', -1, 1)]).rows), [])
 })
