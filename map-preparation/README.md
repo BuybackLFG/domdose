@@ -59,9 +59,17 @@
 ```powershell
 py -3.13 -m venv map-preparation\.venv
 map-preparation\.venv\Scripts\python.exe -m pip install -r requirements-map.txt
+$env:PYTHONPATH = (Get-Location).Path
 map-preparation\.venv\Scripts\python.exe map-preparation\extract_region.py <PBF> 131.848 43.0835 132.0715 43.2954 map-preparation\region.json
 map-preparation\.venv\Scripts\python.exe map-preparation\render_map.py map-preparation\region.json frontend\src\features\dossier\pilotHouses.ts <PBF> output\maps\vladivostok-pilot.png output\maps\vladivostok-pilot.manifest.json --font <FONT_REGULAR> --font-bold <FONT_BOLD>
 ```
+
+`PYTHONPATH` с корнем репозитория обязателен: скрипты импортируют `core.logging`
+(только stdlib, дополнительных пакетов в окружение карты не требуется). Каталог
+`map-preparation` не является Python-пакетом (дефис в имени), поэтому запуск через
+`-m` невозможен, а правка `sys.path` внутри скриптов не используется. Без переменной
+запуск завершается `ModuleNotFoundError: No module named 'core'`. Поле `commands`
+manifest эту переменную не перечисляет.
 
 Каталог `output\maps` нужно создать заранее. Без `--font` / `--font-bold` используются
 `arial.ttf` и `arialbd.ttf` из `C:\Windows\Fonts`; при отсутствии файла скрипт
@@ -72,6 +80,29 @@ map-preparation\.venv\Scripts\python.exe map-preparation\render_map.py map-prepa
 
 `pip install` требует сети только на этапе подготовки; извлечение и рендер работают
 локально.
+
+## Журнал
+
+Оба скрипта пишут маркированные события через `core/logging.py` (сервис `map`) в
+файл `logs\map\execution.log` от корня репозитория (каталог `logs/` вне Git) и
+дублируют их в stdout. Путь, уровень и дублирование меняются переменными
+`DOMDOSSE_LOG_FILE_PATH`, `DOMDOSSE_LOG_LEVEL` и `DOMDOSSE_LOG_STDOUT`. В событиях только
+имена файлов, bbox, счётчики, размеры и sha256, без абсолютных путей.
+
+| Маркер | Когда | Основные поля |
+|---|---|---|
+| `MAP_EXTRACT_STARTED` | начало извлечения | `pbf_name`, `bbox`, `margin_deg` |
+| `MAP_EXTRACT_NODES_COMPLETED` | конец прохода по нодам | `nodes_kept`, `labels` |
+| `MAP_EXTRACT_COMPLETED` | `region.json` записан | `output_name`, счётчики слоёв |
+| `MAP_EXTRACT_FAILED` | отказ извлечения | `reason`: `invalid_arguments`, `pbf_not_found`, `pbf_read_failed`, `output_write_failed` |
+| `MAP_RENDER_STARTED` | начало рендера | `region_name`, `houses_name`, `pbf_name` |
+| `MAP_RENDER_COMPLETED` | PNG и manifest записаны | `width`, `height`, `image_sha256`, `manifest_sha256`, `bounds`, `coastline`, `drawn` |
+| `MAP_RENDER_FAILED` | отказ рендера | `reason`: `invalid_arguments`, `font_not_found`, `pbf_not_found`, `region_read_failed`, `houses_read_failed`, `invalid_house_catalog`, `frame_outside_region`, `output_write_failed`, `render_failed` |
+
+После события отказа скрипт завершается ненулевым кодом: ошибка разбора аргументов
+`render_map.py` — кодом 2 argparse, прочие ожидаемые отказы — кодом 1 с текстом причины
+в stderr. Причины `pbf_read_failed`, `output_write_failed` извлечения и `render_failed`
+рендера пробрасывают исходное исключение с traceback; событие содержит `error_type`.
 
 ## Известные приближения
 

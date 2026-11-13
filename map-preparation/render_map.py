@@ -4,7 +4,7 @@
 рамку EPSG:3857 по 20 домам с отступом PAD_M, рисует слои Pillow с
 суперсэмплингом и пишет manifest для L.imageOverlay без абсолютных путей.
 
-Использование:
+Использование (из корня репозитория, PYTHONPATH = корень):
     python render_map.py <region.json> <pilotHouses.ts> <PBF> <out.png>
         <out.manifest.json> [--font <FONT>] [--font-bold <FONT_BOLD>]
 """
@@ -24,6 +24,10 @@ from PIL import Image, ImageDraw, ImageFont
 from shapely import affinity
 from shapely.geometry import LineString, MultiLineString, Point, box
 from shapely.ops import linemerge, polygonize, substring, unary_union
+
+from core.logging import ServiceName, get_logger, load_logging_settings, setup_logging
+
+_logger = get_logger("map-preparation.render_map", service=ServiceName.MAP)
 
 R_EARTH = 6378137.0
 PILOT_SIZE = 20
@@ -96,6 +100,14 @@ KNOWN_APPROXIMATIONS = [
 ]
 
 
+class RenderError(Exception):
+    """Ожидаемый отказ рендера: reason — код причины для журнала."""
+
+    def __init__(self, reason, message):
+        super().__init__(message)
+        self.reason = reason
+
+
 def lonlat_to_mercator(lon, lat):
     """WGS84 (градусы) -> EPSG:3857 (метры, сфера R_EARTH)."""
     x = R_EARTH * math.radians(lon)
@@ -123,7 +135,7 @@ def parse_houses(ts_path):
     """Дома PILOT_HOUSES из pilotHouses.ts: список (house_id, lat, lon).
 
     Учитываются только объектные литералы со строковым house_id.
-    SystemExit, если домов не PILOT_SIZE, id повторяются или у дома
+    RenderError, если домов не PILOT_SIZE, id повторяются или у дома
     нет конечных координат: неполный каталог не даёт рамку карты.
     """
     text = Path(ts_path).read_text(encoding="utf-8")
@@ -132,12 +144,14 @@ def parse_houses(ts_path):
         house_id = re.search(r"house_id:\s*'([^']+)'", block).group(1)
         lat, lon = _number(block, "lat"), _number(block, "lon")
         if lat is None or lon is None:
-            raise SystemExit(f"{house_id}: нет конечных координат lat/lon")
+            raise RenderError("invalid_house_catalog",
+                              f"{house_id}: нет конечных координат lat/lon")
         houses.append((house_id, lat, lon))
     ids = {house_id for house_id, _, _ in houses}
     if len(houses) != PILOT_SIZE or len(ids) != PILOT_SIZE:
-        raise SystemExit(f"ожидалось {PILOT_SIZE} уникальных домов, "
-                         f"получено {len(houses)} (уникальных {len(ids)})")
+        raise RenderError("invalid_house_catalog",
+                          f"ожидалось {PILOT_SIZE} уникальных домов, "
+                          f"получено {len(houses)} (уникальных {len(ids)})")
     return houses
 
 
@@ -168,10 +182,11 @@ def sha256_file(path):
 
 
 def load_font(path, size):
-    """TrueType-шрифт размера size; SystemExit с подсказкой, если файла нет."""
+    """TrueType-шрифт размера size; RenderError с подсказкой, если файла нет."""
     if not Path(path).is_file():
-        raise SystemExit(f"шрифт не найден: {path}; передайте путь к TTF "
-                         "с кириллицей через --font / --font-bold")
+        raise RenderError("font_not_found",
+                          f"шрифт не найден: {path}; передайте путь к TTF "
+                          "с кириллицей через --font / --font-bold")
     return ImageFont.truetype(path, size)
 
 
@@ -490,38 +505,90 @@ def build_manifest(frame, height, paths, tools, coast, counts):
     }
 
 
+def render_files(args):
+    """Рендер PNG и manifest по аргументам CLI; сводка для журнала.
+
+    Ожидаемые отказы входа и записи — RenderError с кодом причины.
+    """
+    fonts = (load_font(args.font, 11 * SS), load_font(args.font_bold, 13 * SS),
+             load_font(args.font_bold, 12 * SS))
+    if not Path(args.pbf).is_file():
+        raise RenderError("pbf_not_found", f"PBF не найден: {args.pbf}")
+    try:
+        region = json.loads(Path(args.region).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise RenderError("region_read_failed", f"region.json не прочитан: {exc}") from exc
+    try:
+        houses = parse_houses(args.houses)
+    except (OSError, UnicodeDecodeError) as exc:
+        raise RenderError("houses_read_failed", f"каталог домов не прочитан: {exc}") from exc
+    frame, height = compute_frame(houses)
+    west, south = mercator_to_lonlat(frame[0], frame[1])
+    east, north = mercator_to_lonlat(frame[2], frame[3])
+    e_west, e_south, e_east, e_north = region["bbox"]
+    if not (e_west <= west and e_south <= south and east <= e_east and north <= e_north):
+        raise RenderError("frame_outside_region",
+                          "рамка карты выходит за bbox region.json; "
+                          "повторите extract_region.py с большим bbox")
+
+    image, coast, counts = render(region, frame, height, fonts)
+    try:
+        image.save(args.out_png, optimize=True)
+    except OSError as exc:
+        raise RenderError("output_write_failed", f"PNG не записан: {exc}") from exc
+    tools = tool_versions([("regular", args.font), ("bold", args.font_bold)])
+    paths = {"png": args.out_png, "pbf": args.pbf, "region": args.region}
+    manifest = build_manifest(frame, height, paths, tools, coast, counts)
+    try:
+        Path(args.out_manifest).write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except OSError as exc:
+        raise RenderError("output_write_failed", f"manifest не записан: {exc}") from exc
+    return {
+        "png_name": Path(args.out_png).name,
+        "manifest_name": Path(args.out_manifest).name,
+        "width": WIDTH,
+        "height": height,
+        "image_sha256": manifest["image_sha256"],
+        "manifest_sha256": sha256_file(args.out_manifest),
+        "bounds": {"south": south, "west": west, "north": north, "east": east},
+        "coastline": coast,
+        "drawn": counts,
+    }
+
+
 def main():
-    """CLI: рендер PNG и manifest по region.json и каталогу домов."""
+    """CLI: рендер PNG и manifest; события MAP_RENDER_* в журнал карты.
+
+    Журнал настраивается до разбора аргументов (fail-fast). Ожидаемый отказ —
+    событие и SystemExit с текстом; непредвиденный пробрасывается после события.
+    """
+    setup_logging(load_logging_settings(ServiceName.MAP))
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     for name in ("region", "houses", "pbf", "out_png", "out_manifest"):
         parser.add_argument(name)
     parser.add_argument("--font", default=DEFAULT_FONT)
     parser.add_argument("--font-bold", default=DEFAULT_FONT_BOLD)
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except SystemExit as exc:
+        if exc.code not in (0, None):
+            _logger.error("MAP_RENDER_FAILED", "render failed", reason="invalid_arguments")
+        raise
 
-    fonts = (load_font(args.font, 11 * SS), load_font(args.font_bold, 13 * SS),
-             load_font(args.font_bold, 12 * SS))
-    if not Path(args.pbf).is_file():
-        raise SystemExit(f"PBF не найден: {args.pbf}")
-    region = json.loads(Path(args.region).read_text(encoding="utf-8"))
-    frame, height = compute_frame(parse_houses(args.houses))
-    west, south = mercator_to_lonlat(frame[0], frame[1])
-    east, north = mercator_to_lonlat(frame[2], frame[3])
-    e_west, e_south, e_east, e_north = region["bbox"]
-    if not (e_west <= west and e_south <= south and east <= e_east and north <= e_north):
-        raise SystemExit("рамка карты выходит за bbox region.json; "
-                         "повторите extract_region.py с большим bbox")
-
-    image, coast, counts = render(region, frame, height, fonts)
-    image.save(args.out_png, optimize=True)
-    tools = tool_versions([("regular", args.font), ("bold", args.font_bold)])
-    paths = {"png": args.out_png, "pbf": args.pbf, "region": args.region}
-    manifest = build_manifest(frame, height, paths, tools, coast, counts)
-    Path(args.out_manifest).write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"[render] {WIDTH}x{height} sha256={manifest['image_sha256']}")
-    print(f"[render] bounds S={south!r} W={west!r} N={north!r} E={east!r}")
-    print(f"[render] coastline={coast} drawn={counts}")
+    _logger.info("MAP_RENDER_STARTED", "render started",
+                 region_name=Path(args.region).name, houses_name=Path(args.houses).name,
+                 pbf_name=Path(args.pbf).name)
+    try:
+        summary = render_files(args)
+    except RenderError as exc:
+        _logger.error("MAP_RENDER_FAILED", "render failed", reason=exc.reason)
+        raise SystemExit(str(exc)) from None
+    except Exception as exc:
+        _logger.error("MAP_RENDER_FAILED", "render failed",
+                      reason="render_failed", error_type=type(exc).__name__)
+        raise
+    _logger.info("MAP_RENDER_COMPLETED", "map image and manifest written", **summary)
 
 
 if __name__ == "__main__":

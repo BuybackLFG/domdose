@@ -2,6 +2,7 @@
 # копируют api/Dockerfile и api/scoring.Dockerfile; остальное в контекст не попадает.
 *
 !requirements.txt
+!constraints.txt
 !api/
 !contract/
 !core/

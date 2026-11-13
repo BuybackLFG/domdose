@@ -4,14 +4,21 @@
 и подписи (place, natural=bay/strait) в bbox; затем way с тегами рендера
 получают геометрию из запомненных нод. Только OSM way, без relations.
 
-Использование:
+Использование (из корня репозитория, PYTHONPATH = корень):
     python extract_region.py <input.pbf> <west> <south> <east> <north> <out.json>
 """
 
 import json
+import math
 import sys
+from pathlib import Path
 
 import osmium
+
+from core.logging import ServiceName, get_logger, load_logging_settings, setup_logging
+
+_logger = get_logger("map-preparation.extract_region", service=ServiceName.MAP)
+USAGE = "usage: extract_region.py <input.pbf> <west> <south> <east> <north> <out.json>"
 
 WATER_AREA_TAGS = (
     ("natural", "water"),
@@ -140,22 +147,46 @@ class WayPass(osmium.SimpleHandler):
             self.railways.append(coords)
 
 
+def _fail(reason, message, **data):
+    """Событие MAP_EXTRACT_FAILED с кодом причины и выход с текстом message."""
+    _logger.error("MAP_EXTRACT_FAILED", "extraction failed", reason=reason, **data)
+    raise SystemExit(message)
+
+
 def main():
-    pbf, west, south, east, north, out = (
-        sys.argv[1], *[float(v) for v in sys.argv[2:6]], sys.argv[6])
+    """CLI: два прохода по PBF и запись region.json; отказ — событие журнала.
+
+    Журнал настраивается до разбора аргументов (fail-fast). Ожидаемый отказ
+    завершается SystemExit, непредвиденный пробрасывается после события.
+    """
+    setup_logging(load_logging_settings(ServiceName.MAP))
+    try:
+        pbf, west, south, east, north, out = (
+            sys.argv[1], *[float(v) for v in sys.argv[2:6]], sys.argv[6])
+    except (IndexError, ValueError):
+        _fail("invalid_arguments", USAGE, argument_count=len(sys.argv) - 1)
+    if not all(math.isfinite(v) for v in (west, south, east, north)):
+        _fail("invalid_arguments", USAGE + "; bbox must be finite",
+              argument_count=len(sys.argv) - 1)
+    if not Path(pbf).is_file():
+        _fail("pbf_not_found", f"PBF не найден: {pbf}", pbf_name=Path(pbf).name)
     margin = 0.03  # градуса запаса на геометрию way у края bbox
     geo_box = (west - margin, south - margin, east + margin, north + margin)
     label_box = (west, south, east, north)
 
-    print("[extract] pass 1: nodes ...", flush=True)
-    np = NodePass(geo_box, label_box)
-    np.apply_file(pbf)
-
-    print(f"[extract] nodes kept: {len(np.nodes)}, labels: {len(np.labels)}",
-          flush=True)
-    print("[extract] pass 2: ways ...", flush=True)
-    wp = WayPass(np.nodes, geo_box)
-    wp.apply_file(pbf)
+    _logger.info("MAP_EXTRACT_STARTED", "extraction started",
+                 pbf_name=Path(pbf).name, bbox=list(label_box), margin_deg=margin)
+    try:
+        np = NodePass(geo_box, label_box)
+        np.apply_file(pbf)
+        _logger.info("MAP_EXTRACT_NODES_COMPLETED", "node pass completed",
+                     nodes_kept=len(np.nodes), labels=len(np.labels))
+        wp = WayPass(np.nodes, geo_box)
+        wp.apply_file(pbf)
+    except Exception as exc:
+        _logger.error("MAP_EXTRACT_FAILED", "extraction failed",
+                      reason="pbf_read_failed", error_type=type(exc).__name__)
+        raise
 
     region = {
         "bbox": [west, south, east, north],
@@ -168,13 +199,20 @@ def main():
         "railways": wp.railways,
         "labels": np.labels,
     }
-    with open(out, "w", encoding="utf-8") as fh:
-        json.dump(region, fh)
-    print(f"[extract] coastline={len(wp.coastline)} "
-          f"water={len(wp.water_areas)} green={len(wp.green)} "
-          f"buildings={len(wp.buildings)} roads={len(wp.roads)} "
-          f"waterways={len(wp.waterways)} railways={len(wp.railways)}",
-          flush=True)
+    try:
+        with open(out, "w", encoding="utf-8") as fh:
+            json.dump(region, fh)
+    except OSError as exc:
+        _logger.error("MAP_EXTRACT_FAILED", "extraction failed",
+                      reason="output_write_failed", error_type=type(exc).__name__)
+        raise
+    _logger.info(
+        "MAP_EXTRACT_COMPLETED", "region written",
+        output_name=Path(out).name, coastline=len(wp.coastline),
+        water_areas=len(wp.water_areas), green=len(wp.green),
+        buildings=len(wp.buildings), roads=len(wp.roads),
+        waterways=len(wp.waterways), railways=len(wp.railways),
+        labels=len(np.labels))
 
 
 if __name__ == "__main__":

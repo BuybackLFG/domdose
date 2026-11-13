@@ -33,8 +33,21 @@ checkout; прочие выгрузки в `dataset/output/` не коммитя
 * pytest и Ruff;
 * постоянного хранилища нет; PostgreSQL появится только при подтверждённой потребности.
 
-Зависимости: `requirements.txt` (приложение) и `requirements-dev.txt` (плюс инструменты
-проверки).
+Зависимости: `requirements.txt` (приложение, диапазоны версий), `requirements-dev.txt`
+(плюс инструменты проверки) и `constraints.txt` — точные версии всех прикладных пакетов,
+включая транзитивные, фактически разрешённые `pip` для Linux-образов `api` и `scoring`.
+Образы ставят `requirements.txt` только вместе с `-c constraints.txt`; инструменты
+проверки (`pytest`, `ruff`) в `constraints.txt` не входят.
+
+Обновление `constraints.txt` (из корня репозитория, сеть нужна только на этом шаге;
+образ — тот же тег и digest, что в `FROM` обоих Python-Dockerfile):
+
+```powershell
+docker run --rm -e PIP_DISABLE_PIP_VERSION_CHECK=1 -e PIP_ROOT_USER_ACTION=ignore -v "${PWD}\requirements.txt:/req/requirements.txt:ro" python:3.13.18-slim-trixie@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90 sh -c "pip install --no-cache-dir -q -r /req/requirements.txt && pip freeze" | Set-Content -Encoding ascii constraints.txt
+docker compose build
+```
+
+Обновлять при изменении `requirements.txt` или базового образа, затем прогнать тесты.
 
 ### Frontend
 
@@ -80,6 +93,12 @@ py -3.13 -m venv .venv
 .venv\Scripts\python.exe -m pytest
 .venv\Scripts\python.exe -m ruff check api contract core dossier sources utility_rating tests
 ```
+
+Чтобы версии прикладных пакетов локального окружения совпали с образами, установку
+можно ограничить тем же файлом:
+`.venv\Scripts\python.exe -m pip install -r requirements-dev.txt -c constraints.txt`
+(инструменты проверки и Windows-only зависимости, например `colorama`, им не
+ограничиваются).
 
 Локальный запуск без Docker — два процесса:
 
@@ -152,9 +171,10 @@ npm run dev
 
 Базовые образы закреплены тегом и digest: `python:3.13.18-slim-trixie`,
 `node:24.22.3-alpine` (только стадия сборки), `nginx:1.30.6-alpine`. Python-зависимости
-ставятся `pip install --no-cache-dir -r requirements.txt`, frontend — `npm ci` по
-lockfile. Корневой `.dockerignore` пропускает в контекст только пакеты приложения,
-`requirements.txt` и схему датасета; реальные выгрузки `dataset/output`, `.env`, `.git`,
+ставятся `pip install --no-cache-dir -r requirements.txt -c constraints.txt` (точные
+версии, см. «Backend»), frontend — `npm ci` по lockfile. Корневой `.dockerignore`
+пропускает в контекст только пакеты приложения, `requirements.txt`, `constraints.txt` и
+схему датасета; реальные выгрузки `dataset/output`, `.env`, `.git`,
 `tests` и `frontend` в образы `api` и `scoring` не попадают. Python-сервисы работают от
 непривилегированного пользователя с read-only корневой файловой системой.
 

@@ -57,6 +57,7 @@ class ServiceName(StrEnum):
     API = "api"
     SCORING = "scoring"
     LEGACY = "legacy"
+    MAP = "map"
 
 
 @dataclass(frozen=True)
