@@ -1,0 +1,19 @@
+# зависимости
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+*.tsbuildinfo
+
+# локальные данные и секреты
+.env
+*.db
+*.sqlite3
+.DS_Store
+
+# сгенерированное типами не считаем — api.ts коммитим намеренно

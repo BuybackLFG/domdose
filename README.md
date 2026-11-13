@@ -1,0 +1,66 @@
+# ДомДосье
+
+MVP для вайботона: досье на дом из открытых данных.
+
+**Режим работы — локальный.** Remote не настроен, пушить нельзя, деплоя нет.
+Решение о пуше и деплое принимает тимлид отдельно.
+
+## Структура
+
+```
+backend/            FastAPI + Python 3.12 (uv)
+  app/api/          эндпоинты (роутеры)
+  app/core/         конфиг
+  app/ingest/       загрузка данных и seed
+  app/db/           доступ к БД
+  tests/            pytest
+frontend/           Vite + React 19 + TS + Tailwind 4
+  src/types/api.ts  генерируется из OpenAPI, руками не править
+data/seed/          JSON для наполнения локальной БД
+scripts/            check.sh, gen_api_types.sh, check_api_types.sh
+.github/workflows/  ci.yml — лежит готовым, включится после первого пуша
+AGENTS.md           правила работы агентов, владельцы, команды
+```
+
+## Быстрый старт
+
+```bash
+cd backend && uv sync
+cd ../frontend && npm install
+cd .. && ./scripts/check.sh
+```
+
+Разработка (два терминала):
+
+```bash
+cd backend && uv run uvicorn app.main:app --reload --port 8000
+cd frontend && npm run dev
+```
+
+- backend: http://localhost:8000, `GET /health` → `{"status":"ok"}`
+- frontend: http://localhost:5173
+
+## Проверки
+
+`./scripts/check.sh` — ruff format --check, ruff check, pyright, pytest, сборка фронтенда
+и проверка актуальности TS-типов. Exit code 0 = можно коммитить.
+
+## Контракт API
+
+```bash
+./scripts/gen_api_types.sh   # frontend/src/types/api.ts из локального /openapi.json
+```
+
+Сгенерированный файл коммитим. Если он разошёлся с OpenAPI, `check.sh` падает.
+
+## Seed
+
+```bash
+cd backend && uv run seeded
+```
+
+Читает `data/seed/*.json`. Пока каталог пуст — заглушки для задачи про модель данных.
+
+## Правила
+
+См. `AGENTS.md`: карта владельцев, порядок ревью, worktree на задачу, запрет на push.
