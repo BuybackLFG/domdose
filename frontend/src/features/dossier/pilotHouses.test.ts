@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -14,6 +15,11 @@ interface MapManifest {
   projected_bounds: { min_x: number; min_y: number; max_x: number; max_y: number };
   width: number;
   height: number;
+  image_sha256: unknown;
+  attribution: unknown;
+  license: unknown;
+  source: Record<string, unknown>;
+  commands: unknown;
 }
 
 function readManifest(): MapManifest {
@@ -22,6 +28,28 @@ function readManifest(): MapManifest {
     'Нужен prepared map manifest; нулевые или угадываемые bounds не принимаются.',
   ).toBe(true);
   return JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')) as MapManifest;
+}
+
+function readAsset(): Buffer {
+  expect(
+    existsSync(ASSET_PATH),
+    'Отсутствует prepared asset public/maps/vladivostok-pilot.png; online fallback запрещён.',
+  ).toBe(true);
+  return readFileSync(ASSET_PATH);
+}
+
+/** Все строковые значения вложенной структуры manifest. */
+function collectStrings(value: unknown): string[] {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(collectStrings);
+  if (value !== null && typeof value === 'object') {
+    return Object.values(value).flatMap(collectStrings);
+  }
+  return [];
+}
+
+function looksAbsolute(path: string): boolean {
+  return /^(?:[A-Za-z]:|[/\\])/.test(path);
 }
 
 function projectLongitude(longitude: number): number {
@@ -122,5 +150,55 @@ describe('подготовленная offline-карта', () => {
       Math.abs(manifest.width * projectedHeight - manifest.height * projectedWidth),
       'height должен быть round(width * projectedHeight / projectedWidth), без растяжения карты.',
     ).toBeLessThanOrEqual(projectedWidth / 2 + 1e-6);
+  });
+
+  it('берёт width и height manifest из IHDR реального PNG', () => {
+    const manifest = readManifest();
+    const png = readAsset();
+
+    expect(png.subarray(12, 16).toString('ascii')).toBe('IHDR');
+    expect(png.readUInt32BE(16)).toBe(manifest.width);
+    expect(png.readUInt32BE(20)).toBe(manifest.height);
+  });
+
+  it('фиксирует sha256 байтов PNG в manifest', () => {
+    const manifest = readManifest();
+    const digest = createHash('sha256').update(readAsset()).digest('hex');
+
+    expect(manifest.image_sha256).toBe(digest);
+  });
+
+  it('несёт attribution и лицензию OpenStreetMap', () => {
+    const manifest = readManifest();
+
+    expect(manifest.attribution).toBe('© OpenStreetMap contributors');
+    expect(manifest.license).toBe('ODbL-1.0');
+  });
+
+  it('описывает исходный PBF без абсолютных путей машины', () => {
+    const { source } = readManifest();
+
+    expect(typeof source.pbf_name).toBe('string');
+    expect(String(source.pbf_name).trim()).not.toBe('');
+    expect(source.pbf_sha256).toEqual(expect.stringMatching(/^[0-9a-f]{64}$/));
+    expect(collectStrings(source).filter(looksAbsolute)).toEqual([]);
+  });
+
+  it('хранит команды воспроизведения подготовки', () => {
+    const { commands } = readManifest();
+
+    expect(Array.isArray(commands)).toBe(true);
+    const list = Array.isArray(commands) ? commands : [];
+    expect(list.length).toBeGreaterThan(0);
+    expect(list.filter((command) => (
+      typeof command !== 'string' || command.trim() === ''
+    ))).toEqual([]);
+  });
+
+  it('включает подготовленную карту с attribution из manifest', () => {
+    expect(PILOT_MAP.prepared, 'PILOT_MAP.prepared должен быть true при готовом asset').toBe(true);
+    const manifest = readManifest();
+
+    expect(PILOT_MAP.attribution).toBe(manifest.attribution);
   });
 });

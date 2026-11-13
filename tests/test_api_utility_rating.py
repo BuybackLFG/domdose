@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from api.main import app, create_app
 from core.config import Settings
+from scoring_harness import in_process_scoring_client
 
 CATEGORIES = ("hot_water", "cold_water", "electricity", "heating")
 METRICS = ("frequency", "hours", "longest")
@@ -60,6 +61,11 @@ def valid_raw():
     }
 
 
+def make_app(settings):
+    """Публичное приложение с in-process scoring вместо сети."""
+    return create_app(settings, scoring_client=in_process_scoring_client())
+
+
 @pytest.fixture
 def paths(tmp_path):
     dataset_path = tmp_path / "synthetic-dataset.json"
@@ -79,7 +85,7 @@ def settings(paths):
 
 @pytest.fixture
 def client(settings):
-    with TestClient(create_app(settings)) as test_client:
+    with TestClient(make_app(settings)) as test_client:
         yield test_client
 
 
@@ -105,7 +111,7 @@ def test_module_app_import_and_health_do_not_require_dataset(tmp_path):
     missing = tmp_path / "missing.json"
     settings = Settings(dataset_path=missing, schema_path=missing)
 
-    with TestClient(create_app(settings)) as local_client:
+    with TestClient(make_app(settings)) as local_client:
         assert local_client.get("/api/health").json() == {"status": "ok"}
     with TestClient(app) as module_client:
         response = module_client.get("/api/health")
@@ -215,7 +221,7 @@ def test_missing_empty_or_malformed_dataset_or_schema_is_unavailable(
     else:
         path.write_text("" if content == "empty" else "{not json", encoding="utf-8")
 
-    with TestClient(create_app(settings)) as client:
+    with TestClient(make_app(settings)) as client:
         response = client.get("/api/ready")
 
     assert_dataset_unavailable(response)
@@ -241,7 +247,7 @@ def test_incomplete_or_wrong_size_dataset_is_unavailable(paths, settings, failur
         raw["houses"] = make_houses(int(failure))
     write_json(paths[0], raw)
 
-    with TestClient(create_app(settings)) as client:
+    with TestClient(make_app(settings)) as client:
         response = client.get("/api/houses")
 
     assert_dataset_unavailable(response)
@@ -255,7 +261,7 @@ def test_house_errors_distinguish_not_found_invalid_format_and_unavailable(
 
     paths[0].unlink()
     unavailable_settings = Settings(dataset_path=paths[0], schema_path=paths[1])
-    with TestClient(create_app(unavailable_settings)) as unavailable_client:
+    with TestClient(make_app(unavailable_settings)) as unavailable_client:
         assert_dataset_unavailable(unavailable_client.get("/api/houses/house_999999"))
         assert_dataset_unavailable(unavailable_client.get("/api/houses/not-a-house"))
 
@@ -283,7 +289,7 @@ def test_successful_snapshot_is_cached_until_new_app(client, paths, settings):
     assert cached.json() == original.json()
     assert client.get("/api/ready").json() == {"status": "ready"}
 
-    with TestClient(create_app(settings)) as new_client:
+    with TestClient(make_app(settings)) as new_client:
         assert_dataset_unavailable(new_client.get("/api/ready"))
 
 
@@ -298,7 +304,7 @@ def test_invalid_timestamp_or_nan_temporal_input_is_unavailable(
         raw["window"]["start"] = float("nan")
     write_json(paths[0], raw)
 
-    with TestClient(create_app(settings)) as client:
+    with TestClient(make_app(settings)) as client:
         response = client.get("/api/ready")
 
     assert_dataset_unavailable(response)

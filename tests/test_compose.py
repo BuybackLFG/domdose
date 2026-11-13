@@ -16,6 +16,7 @@ DOCKERFILES = {
 }
 NGINX_PATH = ROOT / "frontend" / "nginx.conf"
 MAP_ASSET = ROOT / "frontend" / "public" / "maps" / "vladivostok-pilot.png"
+MAP_MANIFEST_URL = "/maps/vladivostok-pilot.manifest.json"
 
 
 def top_section(name, text=COMPOSE_TEXT):
@@ -82,6 +83,11 @@ def test_single_internal_network_is_shared_by_all_services():
         block = service_block(service)
         assert direct_key(block, "networks")
         assert "internal" in list_entries(block, "networks")
+
+
+def test_api_and_scoring_join_only_internal_network():
+    for service in ("api", "scoring"):
+        assert list_entries(service_block(service), "networks") == ["internal"]
 
 
 def test_only_frontend_publishes_loopback_8080_to_container_80():
@@ -197,6 +203,12 @@ def test_nginx_ready_checks_spa_and_required_local_map_asset():
     assert "/maps/vladivostok-pilot.png" in nginx
     assert "/maps/vladivostok-pilot.png" in frontend_healthcheck
     assert re.search(r"(?i)(?:return\s+503|proxy_intercept_errors\s+on)", nginx)
+
+
+def test_nginx_ready_also_requires_map_manifest():
+    nginx = read_required(NGINX_PATH)
+
+    assert MAP_MANIFEST_URL in nginx
 
 
 def test_content_security_policy_is_same_origin():

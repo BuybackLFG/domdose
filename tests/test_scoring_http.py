@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from api.main import create_app
 from api.scoring_main import app as scoring_app
 from core.config import Settings
+from scoring_harness import scoring_transport
 from sources.scoring_client import ScoringClient
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -195,29 +196,6 @@ def dataset_settings(tmp_path):
     write_json(dataset_path, synthetic_raw())
     write_json(schema_path, SCHEMA)
     return Settings(dataset_path=dataset_path, schema_path=schema_path)
-
-
-def scoring_transport(application):
-    internal = TestClient(application)
-
-    def handle(request):
-        path = request.url.path
-        if request.url.query:
-            path += "?" + request.url.query.decode("ascii")
-        response = internal.request(
-            request.method,
-            path,
-            content=request.content,
-            headers={"content-type": request.headers.get("content-type", "")},
-        )
-        return httpx.Response(
-            response.status_code,
-            headers=response.headers,
-            content=response.content,
-            request=request,
-        )
-
-    return httpx.MockTransport(handle)
 
 
 def make_public_app(settings, transport):

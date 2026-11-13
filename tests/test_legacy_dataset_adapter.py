@@ -4,8 +4,10 @@ import json
 import sys
 from pathlib import Path
 
+import httpx
 import pytest
 
+from scoring_harness import in_process_scoring_client, scoring_transport
 from sources.legacy_dataset import (
     build_dataset,
     main,
@@ -240,8 +242,53 @@ def test_main_validation_failure_preserves_existing_output(
     )
 
     with pytest.raises(ValueError):
-        main()
+        main(scoring_client=in_process_scoring_client())
     assert output.read_bytes() == sentinel
+
+
+def test_main_checks_rating_through_injected_scoring_client(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ловит обход ScoringClient: проверка рейтинга идёт по internal HTTP."""
+    from sources.scoring_client import ScoringClient
+
+    legacy = tmp_path / "legacy.json"
+    current = tmp_path / "current.json"
+    schema = tmp_path / "schema.json"
+    output = tmp_path / "utility-rating.json"
+    records = [make_record(1, "2026-10-15T10:00:00", "2026-10-15T12:00:00")]
+    legacy.write_text(json.dumps(records), encoding="utf-8")
+    current.write_text(json.dumps(make_draft(ADDRESSES)), encoding="utf-8")
+    schema.write_text(json.dumps(SCHEMA), encoding="utf-8")
+    proxy = scoring_transport()
+    paths = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        paths.append(request.url.path)
+        return proxy.handle_request(request)
+
+    client = ScoringClient(
+        base_url="http://scoring", transport=httpx.MockTransport(handle)
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "legacy_dataset.py",
+            "--legacy", str(legacy),
+            "--current", str(current),
+            "--output", str(output),
+            "--schema", str(schema),
+        ],
+    )
+
+    main(scoring_client=client)
+
+    assert "/internal/v1/score_city" in paths
+    assert set(paths) <= {"/internal/v1/parse_dataset", "/internal/v1/score_city"}
+    assert json.loads(output.read_text(encoding="utf-8")) == build_dataset(
+        records, make_draft(ADDRESSES)
+    )
 
 
 def test_parse_address_key_normalization() -> None:

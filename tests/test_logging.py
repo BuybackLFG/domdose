@@ -27,6 +27,7 @@ from core.logging import (
     shutdown_logging,
     write_env_snapshot,
 )
+from scoring_harness import in_process_scoring_client
 
 REPO_ROOT = Path(__file__).parent.parent
 LINE_RE = re.compile(
@@ -216,7 +217,7 @@ def test_create_app_fails_fast_on_startup_with_invalid_logging_config(
     tmp_path, monkeypatch
 ):
     monkeypatch.setenv("DOMDOSSE_LOG_LEVEL", "INVALID")
-    application = api_cases.create_app(api_settings(tmp_path))
+    application = api_cases.make_app(api_settings(tmp_path))
 
     with pytest.raises((ValueError, RuntimeError)):
         with TestClient(application):
@@ -236,7 +237,9 @@ def test_api_main_import_and_reimport_do_not_write_before_lifespan_startup(
     module = importlib.reload(module)
     assert not log_path.exists(), "api.main reload wrote execution.log"
 
-    application = module.create_app(api_settings(tmp_path))
+    application = module.create_app(
+        api_settings(tmp_path), scoring_client=in_process_scoring_client()
+    )
     assert not log_path.exists(), "create_app wrote execution.log before startup"
     with TestClient(application):
         assert log_path.is_file(), "lifespan startup did not create execution.log"
@@ -305,7 +308,7 @@ def test_api_503_has_boundary_markers_without_raw_path(tmp_path):
     missing = tmp_path / "private-missing-name.json"
     settings = api_cases.Settings(dataset_path=missing, schema_path=missing)
 
-    with TestClient(api_cases.create_app(settings)) as client:
+    with TestClient(api_cases.make_app(settings)) as client:
         response = client.get("/api/ready")
 
     assert response.status_code == 503
@@ -320,7 +323,7 @@ def test_snapshot_ready_and_cache_hit_are_machine_readable(tmp_path):
     path = tmp_path / "execution.log"
     configure("api", path)
 
-    with TestClient(api_cases.create_app(api_settings(tmp_path))) as client:
+    with TestClient(api_cases.make_app(api_settings(tmp_path))) as client:
         assert client.get("/api/houses").status_code == 200
         assert client.get("/api/houses").status_code == 200
 
@@ -365,7 +368,7 @@ def test_legacy_skip_counters_and_no_plain_print(tmp_path, monkeypatch, capsys):
     )
     configure("legacy", log_path)
 
-    legacy_cases.main()
+    legacy_cases.main(scoring_client=in_process_scoring_client())
 
     assert capsys.readouterr().out == ""
     built = event(log_path, "LEGACY_DATASET_BUILT")
