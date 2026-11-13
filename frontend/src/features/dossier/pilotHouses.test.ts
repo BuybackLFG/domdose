@@ -6,7 +6,9 @@ import { PILOT_HOUSES } from './pilotHouses';
 import { PILOT_MAP } from './map/pilotMap';
 
 const ASSET_PATH = resolve(process.cwd(), 'public/maps/vladivostok-pilot.png');
+const DETAIL_ASSET_PATH = resolve(process.cwd(), 'public/maps/vladivostok-pilot-detail.png');
 const MANIFEST_PATH = resolve(process.cwd(), 'public/maps/vladivostok-pilot.manifest.json');
+const MAX_PNG_BYTES = 8_000_000;
 
 interface MapManifest {
   image: string;
@@ -20,6 +22,31 @@ interface MapManifest {
   license: unknown;
   source: Record<string, unknown>;
   commands: unknown;
+  detail?: unknown;
+  max_zoom?: unknown;
+}
+
+interface DetailLevel {
+  image: unknown;
+  width: unknown;
+  height: unknown;
+  image_sha256: unknown;
+  min_zoom: unknown;
+  bounds?: unknown;
+}
+
+function readDetail(manifest: MapManifest): DetailLevel {
+  const { detail } = manifest;
+  expect(
+    detail !== null && typeof detail === 'object' && !Array.isArray(detail),
+    'manifest.detail должен быть объектом второго уровня той же подложки.',
+  ).toBe(true);
+  return detail as DetailLevel;
+}
+
+function readPng(path: string): Buffer {
+  expect(existsSync(path), `Отсутствует prepared asset ${path}`).toBe(true);
+  return readFileSync(path);
 }
 
 function readManifest(): MapManifest {
@@ -200,5 +227,59 @@ describe('подготовленная offline-карта', () => {
     const manifest = readManifest();
 
     expect(PILOT_MAP.attribution).toBe(manifest.attribution);
+  });
+});
+
+describe('двухуровневая подложка одного кадра', () => {
+  it('держит обзорный уровень 2048×1024, то есть рамку 2:1', () => {
+    const manifest = readManifest();
+
+    expect(manifest.width).toBe(2048);
+    expect(manifest.height).toBe(1024);
+  });
+
+  it('описывает detail-уровень того же кадра с реальным PNG', () => {
+    const manifest = readManifest();
+    const detail = readDetail(manifest);
+
+    expect(detail.image).toBe('/maps/vladivostok-pilot-detail.png');
+    expect(detail.width).toBe(6144);
+    expect(detail.height).toBe(3072);
+    expect(Number(detail.width) * manifest.height).toBe(Number(detail.height) * manifest.width);
+    expect(Number.isInteger(detail.min_zoom)).toBe(true);
+    if (detail.bounds !== undefined) expect(detail.bounds).toEqual(manifest.bounds);
+
+    const png = readPng(DETAIL_ASSET_PATH);
+    expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect(png.subarray(12, 16).toString('ascii')).toBe('IHDR');
+    expect(png.readUInt32BE(16)).toBe(detail.width);
+    expect(png.readUInt32BE(20)).toBe(detail.height);
+    expect(detail.image_sha256).toEqual(expect.stringMatching(/^[0-9a-f]{64}$/));
+    expect(detail.image_sha256).toBe(createHash('sha256').update(png).digest('hex'));
+  });
+
+  it('ограничивает max_zoom целым из [12, 18] выше порога detail', () => {
+    const manifest = readManifest();
+    const detail = readDetail(manifest);
+
+    expect(Number.isInteger(manifest.max_zoom)).toBe(true);
+    expect(manifest.max_zoom).toBeGreaterThanOrEqual(12);
+    expect(manifest.max_zoom).toBeLessThanOrEqual(18);
+    expect(Number(manifest.max_zoom)).toBeGreaterThan(Number(detail.min_zoom));
+  });
+
+  it('держит каждый PNG подложки не больше 8 000 000 байт', () => {
+    expect(readAsset().length).toBeLessThanOrEqual(MAX_PNG_BYTES);
+    expect(readPng(DETAIL_ASSET_PATH).length).toBeLessThanOrEqual(MAX_PNG_BYTES);
+  });
+
+  it('передаёт detail и масштабы manifest в PILOT_MAP без дублирования чисел', () => {
+    const manifest = readManifest();
+    const detail = readDetail(manifest);
+    const pilotMap: Readonly<Record<string, unknown>> = PILOT_MAP;
+
+    expect(pilotMap.detailImageUrl).toBe(detail.image);
+    expect(pilotMap.detailMinZoom).toBe(detail.min_zoom);
+    expect(pilotMap.maxZoom).toBe(manifest.max_zoom);
   });
 });

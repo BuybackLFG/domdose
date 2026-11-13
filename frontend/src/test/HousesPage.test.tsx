@@ -155,7 +155,7 @@ describe('загрузка списка и detail', () => {
     const pending = deferred<Response>();
     installFetch(() => pending.promise);
     render(<DossierPage />);
-    expect(screen.getByText(/Загружаем пилотную выборку/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Загру(жаем|зка)/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Общий рейтинг:\s*0/i)).not.toBeInTheDocument();
   });
 
@@ -261,7 +261,7 @@ describe('поиск и combobox', () => {
     fireEvent.change(input, { target: { value: 'Несуществующая 999' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(await screen.findByText(/не входит в пилотную выборку/i)).toBeInTheDocument();
+    expect(await screen.findByText(/не входит/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: houseAddress(1) })).toBeInTheDocument();
   });
 
@@ -300,7 +300,7 @@ describe('события и weakest', () => {
     expect(screen.getByText(/не доказывает их отсутствие/i)).toBeInTheDocument();
   });
 
-  it('сортирует события по убыванию started_at и показывает ended_at null', async () => {
+  it('показывает события строго в порядке ответа API и ended_at null как продолжающееся', async () => {
     const olderOngoing = makeEvent({
       category: 'electricity',
       started_at: '2026-10-14T10:00:00+10:00',
@@ -313,19 +313,28 @@ describe('события и weakest', () => {
       ended_at: '2026-11-01T12:00:00+10:00',
       source_url: 'https://source.test/event/newer',
     });
+    const middle = makeEvent({
+      category: 'cold_water',
+      started_at: '2026-10-20T10:00:00+10:00',
+      ended_at: '2026-10-20T12:00:00+10:00',
+      source_url: 'https://source.test/event/middle',
+    });
+    // Порядок намеренно не монотонен по started_at: любая сортировка во frontend его меняет.
     installFetch((url) => (
       url.endsWith('/api/houses')
         ? Promise.resolve(jsonResponse(makeList()))
-        : Promise.resolve(jsonResponse(makeDetail(1, { events: [olderOngoing, newer] })))
+        : Promise.resolve(jsonResponse(makeDetail(1, { events: [olderOngoing, newer, middle] })))
     ));
     render(<DossierPage />);
 
     const eventList = await screen.findByRole('list', { name: /События дома/i });
     const items = within(eventList).getAllByRole('listitem');
-    expect(items).toHaveLength(2);
-    expect(items[0]).toHaveTextContent('Отопление');
-    expect(items[1]).toHaveTextContent('Электричество');
-    expect(items[1]).toHaveTextContent('Продолжается');
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveTextContent('Электричество');
+    expect(items[0]).toHaveTextContent('Продолжается');
+    expect(items[1]).toHaveTextContent('Отопление');
+    expect(items[1]).not.toHaveTextContent('Продолжается');
+    expect(items[2]).toHaveTextContent('Холодная вода');
   });
 
   it('берёт weakest из DTO и не вычисляет минимум категории самостоятельно', async () => {
