@@ -2,20 +2,28 @@
   "image": "/maps/vladivostok-pilot.png",
   "crs": "EPSG:3857",
   "width": 2048,
-  "height": 2692,
+  "height": 1024,
   "bounds": {
-    "south": 43.08714411460467,
-    "west": 131.8530462707382,
-    "north": 43.2917054836412,
-    "east": 132.0664957292618
+    "south": 43.08716298893922,
+    "west": 131.67925338038359,
+    "north": 43.2916866724518,
+    "east": 132.24028861961642
   },
   "projected_bounds": {
-    "min_x": 14677813.970400516,
-    "min_y": 5325245.490191652,
-    "max_x": 14701575.05543346,
-    "max_y": 5356478.322666596
+    "min_x": 14658467.434342746,
+    "min_y": 5325248.367142003,
+    "max_x": 14720921.59149123,
+    "max_y": 5356475.445716245
   },
-  "image_sha256": "23f345c5d080ed916bd73bc525641ee190cd82945d496164a7e91bfdce8dd775",
+  "image_sha256": "046b1d6c7a55a71b7e2494cf1f44c1fc3b740ed00e1794d2c6986bd70d6d3c6c",
+  "detail": {
+    "image": "/maps/vladivostok-pilot-detail.png",
+    "width": 6144,
+    "height": 3072,
+    "image_sha256": "cee4e98436e2fb333cde7eba9b74773f3223457c18f406e47e8037c74b8984e4",
+    "min_zoom": 13
+  },
+  "max_zoom": 14,
   "attribution": "© OpenStreetMap contributors",
   "license": "ODbL-1.0",
   "license_url": "https://opendatacommons.org/licenses/odbl/1-0/",
@@ -27,8 +35,9 @@
   "commands": [
     "py -3.13 -m venv map-preparation\\.venv",
     "map-preparation\\.venv\\Scripts\\python.exe -m pip install -r requirements-map.txt",
-    "map-preparation\\.venv\\Scripts\\python.exe map-preparation\\extract_region.py <PBF> 131.848 43.0835 132.0715 43.2954 map-preparation\\region.json",
-    "map-preparation\\.venv\\Scripts\\python.exe map-preparation\\render_map.py map-preparation\\region.json frontend\\src\\features\\dossier\\pilotHouses.ts <PBF> output\\maps\\vladivostok-pilot.png output\\maps\\vladivostok-pilot.manifest.json --font <FONT_REGULAR> --font-bold <FONT_BOLD>"
+    "$env:PYTHONPATH = (Get-Location).Path",
+    "map-preparation\\.venv\\Scripts\\python.exe map-preparation\\extract_region.py <PBF> 131.63 43.05 132.29 43.33 map-preparation\\region.json",
+    "map-preparation\\.venv\\Scripts\\python.exe map-preparation\\render_map.py map-preparation\\region.json frontend\\src\\features\\dossier\\pilotHouses.ts <PBF> output\\maps\\vladivostok-pilot.png output\\maps\\vladivostok-pilot-detail.png output\\maps\\vladivostok-pilot.manifest.json --font <FONT_REGULAR> --font-bold <FONT_BOLD>"
   ],
   "tools": {
     "python": "3.13.7",
@@ -50,44 +59,81 @@
     ]
   },
   "known_approximations": [
-    "Учтены только OSM way; мультиполигоны (relations) зданий, водоёмов и зелени не отрисованы, часть крупных объектов может отсутствовать.",
-    "Площадные way без замыкания пропущены; их число указано в render_notes.",
-    "Суша/вода определяется направлением coastline (суша слева); при разрывах coastline внутри рамки возможны локальные ошибки заливки.",
-    "Вся зелень (парки, леса, газоны, пляжи) одним тоном.",
-    "Ширина дорог картографическая по классу, не в масштабе; пешеходные дорожки, лестницы, тропы и грунтовки - тонкой линией без обводки.",
-    "Подписи: не более одной на имя улицы, без пересечений; часть имён не поместилась и не подписана; типовые слова сокращены (ул., просп.).",
+    "Площади (здания, леса, парки, водоёмы, landuse, районы) собраны из замкнутых way и мультиполигонов; relations с неполными членами в выгрузке не собираются.",
+    "Суша/вода определяется направлением coastline (суша слева); море повторно заливается поверх растительности, поэтому отмели за линией берега не видны.",
+    "Цвета растительности и landuse обобщены до нескольких классов.",
+    "Ширина дорог картографическая по классу, не в масштабе; на обзорном уровне служебные проезды и пешеходные дорожки не рисуются.",
+    "Подписи без пересечений: часть имён не поместилась и не подписана; типовые слова сокращены (ул., просп.); районы - границы OSM admin_level=9.",
     "Координаты домов в каталоге приближённы (центроид здания OSM или данные владельца) и не являются геодезическими точками входов.",
-    "Один растр 2048 px по ширине рамки без уровней приближения: детализация ограничена масштабом изображения."
+    "Два растра одного кадра без тайлов: между целыми зумами Leaflet растр масштабируется; детализация ограничена детальным уровнем.",
+    "PNG с палитрой 256 цветов без дизеринга: на сглаженных краях и подписях возможна лёгкая ступенчатость оттенков; заливки площадей точные."
   ],
   "render_notes": {
     "projection": "Web Mercator, сфера R=6378137 м, y растёт к северу",
-    "frame": "крайние 20 домов + 1500 м EPSG:3857; по y подгонка до целой высоты в px (менее 0,5 px)",
-    "meters_per_pixel_epsg3857": 11.60209230124201,
-    "ground_meters_per_pixel_at_center": 8.459027060382377,
+    "frame": "охват 20 домов + 1500 м EPSG:3857, симметрично расширен вокруг центра до 2:1",
+    "zoom_formula": "z = log2(156543.03392 * cos(lat_center) / ground_meters_per_pixel)",
+    "detail_min_zoom_rule": "первый целый зум, где обзорный уровень растянут более чем в 1.3 раза",
+    "max_zoom_rule": "целая часть (зум детального уровня + 1)",
+    "levels": {
+      "overview": {
+        "image": "/maps/vladivostok-pilot.png",
+        "width": 2048,
+        "height": 1024,
+        "meters_per_pixel_epsg3857": 30.495193920158272,
+        "ground_meters_per_pixel_at_center": 22.23389228003092,
+        "zoom": 12.325689800220069,
+        "png_bytes": 396517,
+        "palette_colors": 256,
+        "drawn": {
+          "landcover": 13077,
+          "water_areas": 114,
+          "buildings": 61748,
+          "roads_drawn": 3387,
+          "minor_ways_drawn": 0,
+          "district_labels": 5,
+          "bay_labels": 9,
+          "place_labels": 5,
+          "street_labels": 5,
+          "street_names": 169
+        }
+      },
+      "detail": {
+        "image": "/maps/vladivostok-pilot-detail.png",
+        "width": 6144,
+        "height": 3072,
+        "meters_per_pixel_epsg3857": 10.165064640052757,
+        "ground_meters_per_pixel_at_center": 7.411297426676972,
+        "zoom": 13.910652300941225,
+        "png_bytes": 2540242,
+        "palette_colors": 256,
+        "drawn": {
+          "landcover": 13077,
+          "water_areas": 114,
+          "buildings": 61748,
+          "roads_drawn": 28483,
+          "minor_ways_drawn": 27906,
+          "district_labels": 5,
+          "bay_labels": 19,
+          "place_labels": 14,
+          "street_labels": 85,
+          "street_names": 896
+        }
+      }
+    },
     "supersampling": 2,
-    "extract_bbox": "131.848 43.0835 132.0715 43.2954",
-    "region_json_sha256": "eb14901623d19f3af24cda017a9a0c1d558b9605865b0761c54769386b553d44",
+    "extract_bbox": "131.63 43.05 132.29 43.33",
+    "region_json_sha256": "dccdcd54ecba0f1890a4f7d2777020512abe634d91e59be068f2f817098852f3",
     "coastline": {
-      "faces": 9,
-      "by_votes": 9,
+      "faces": 15,
+      "by_votes": 15,
       "by_seed": 0,
       "by_default": 0,
       "mixed_votes": 0,
       "seed_conflicts": 0,
       "open_ends": 0,
-      "land_area_share": 0.5383
+      "land_area_share": 0.4157
     },
-    "drawn": {
-      "green": 9667,
-      "water_areas": 100,
-      "buildings": 69561,
-      "skipped_open_areas": 50,
-      "roads_major": 31435,
-      "roads_minor": 29032,
-      "place_labels": 20,
-      "street_names": 989,
-      "street_labels": 84
-    },
+    "houses_on_land": 20,
     "road_width": "картографическая по классу дороги, не метрическая",
     "street_abbreviations": {
       "улица": "ул.",
