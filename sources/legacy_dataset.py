@@ -2,6 +2,7 @@
 
 Читает старый `events_parsed.json` и текущий draft датасета, переносит
 события старой выборки в опубликованную схему `utility-rating-dataset.schema.json`.
+Собранный набор проверяется и оценивается через internal scoring до записи.
 Допущения MVP задокументированы в `dataset/LEGACY_ADAPTATION.md`.
 """
 
@@ -14,9 +15,10 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from contract.utility_rating import ScoringUnavailable
+from core.config import load_scoring_url
 from core.logging import ServiceName, get_logger, load_logging_settings, setup_logging
-from utility_rating.dataset import parse_dataset
-from utility_rating.scoring import score_city
+from sources.scoring_client import ScoringClient
 
 _logger = get_logger("sources.legacy_dataset", service="legacy")
 
@@ -255,10 +257,15 @@ def write_output(dataset: dict, output_path: Path, force: bool = False) -> None:
         raise
 
 
-def _log_rating_summary(dataset: dict, raw: dict, schema: dict) -> None:
-    """Проверить датасет через parse_dataset + score_city и записать сводку."""
-    parsed = parse_dataset(raw, schema)
-    rating = score_city(parsed)
+def _log_rating_summary(
+    dataset: dict, schema: dict, scoring_client: ScoringClient
+) -> None:
+    """Проверить и оценить датасет через internal scoring и записать сводку.
+
+    DatasetRejected (ValueError) — набор отклонён; ScoringUnavailable — сбой
+    scoring. Оба отказа прерывают адаптацию до записи output.
+    """
+    rating = scoring_client.score_city(dataset, schema, service=ServiceName.LEGACY)
     counts = {name: 0 for name in _CATEGORY_ORDER}
     affected: set[str] = set()
     for event in dataset["events"]:
@@ -292,13 +299,19 @@ def _adaptation_reason(exc: BaseException) -> str:
         return "invalid_json"
     if isinstance(exc, FileExistsError):
         return "output_exists"
+    if isinstance(exc, ScoringUnavailable):
+        return "scoring_unavailable"
     if isinstance(exc, ValueError):
         return "validation_failed"
     return "adaptation_failed"
 
 
-def main() -> None:
-    """Точка входа адаптера: fail-fast настройка журнала до чтения файлов."""
+def main(scoring_client: ScoringClient | None = None) -> None:
+    """Точка входа адаптера: fail-fast настройка журнала до чтения файлов.
+
+    scoring_client None — клиент по DOMDOSSE_SCORING_URL; такой клиент
+    закрывается по завершении.
+    """
     setup_logging(load_logging_settings(ServiceName.LEGACY))
     parser = argparse.ArgumentParser(
         description="Адаптировать legacy events_parsed.json в датасет скоринга."
@@ -310,6 +323,7 @@ def main() -> None:
     parser.add_argument("--force", action="store_true", help="разрешить перезапись output")
     args = parser.parse_args()
 
+    owned_client: ScoringClient | None = None
     try:
         schema_path = args.schema or args.current.parent / _SCHEMA_NAME
         legacy_records = _load_json(args.legacy)
@@ -334,7 +348,9 @@ def main() -> None:
             missing_end_count=missing_end,
             unmatched_address_count=unmatched,
         )
-        _log_rating_summary(dataset, dataset, schema)
+        if scoring_client is None:
+            owned_client = scoring_client = ScoringClient(base_url=load_scoring_url())
+        _log_rating_summary(dataset, schema, scoring_client)
         write_output(dataset, args.output, force=args.force)
         _logger.info(
             "LEGACY_OUTPUT_WRITTEN",
@@ -350,6 +366,9 @@ def main() -> None:
             error_type=type(exc).__name__,
         )
         raise
+    finally:
+        if owned_client is not None:
+            owned_client.close()
 
 
 if __name__ == "__main__":

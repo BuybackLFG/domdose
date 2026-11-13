@@ -10,13 +10,14 @@ from api.schemas import (
     CategoryDetail,
     HouseCategories,
     HouseDetailResponse,
+    HouseEvent,
     HouseListResponse,
     HouseSummary,
     MetricValues,
     Scope,
     Window,
 )
-from contract.utility_rating import UtilityCategory
+from contract.utility_rating import SourcedEvent, UtilityCategory
 from core.logging import get_logger
 from dossier.service import UtilityRatingService
 
@@ -34,6 +35,21 @@ def _scope() -> Scope:
     return Scope(kind="pilot", house_count=20, average_basis="pilot_only")
 
 
+def _house_event(item: SourcedEvent) -> HouseEvent:
+    """HTTP-форма события дома с адресом источника."""
+    event = item.event
+    return HouseEvent(
+        house_id=event.house_id,
+        category=event.category.value,
+        started_at=event.started_at,
+        ended_at=event.ended_at,
+        kind=event.kind.value,
+        is_mass=event.is_mass,
+        is_natural_disaster=event.is_natural_disaster,
+        source_url=item.source_url,
+    )
+
+
 @router.get("/health")
 def get_health() -> dict:
     """Проверка живости без загрузки датасета."""
@@ -42,7 +58,7 @@ def get_health() -> dict:
 
 @router.get("/ready")
 def get_ready(request: Request) -> dict:
-    """Проверка готовности: датасет загружается и считается."""
+    """Готовность: снимок прошёл parse_dataset и score_city в scoring."""
     snapshot = _get_service(request).load_snapshot()
     _logger.info("API_READY", "api ready", house_count=len(snapshot.houses))
     return {"status": "ready"}
@@ -75,7 +91,8 @@ def get_house(house_id: str, request: Request) -> HouseDetailResponse:
     snapshot = service.load_snapshot()
     if _HOUSE_ID_PATTERN.fullmatch(house_id) is None:
         raise InvalidRequestError("house_id must match ^house_[0-9]{6}$")
-    house, house_rating = service.get_house(house_id)
+    dossier = service.get_house(house_id)
+    house_rating = dossier.rating
     categories = HouseCategories(
         **{
             name: CategoryDetail(
@@ -93,8 +110,10 @@ def get_house(house_id: str, request: Request) -> HouseDetailResponse:
     return HouseDetailResponse(
         scope=_scope(),
         window=Window(start=snapshot.window.start, end=snapshot.window.end),
-        house_id=house.house_id,
-        address=house.address,
+        house_id=dossier.house.house_id,
+        address=dossier.house.address,
         overall_score=house_rating.overall_score,
         categories=categories,
+        weakest=house_rating.weakest.value,
+        events=[_house_event(item) for item in dossier.events],
     )

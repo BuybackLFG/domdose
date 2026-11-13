@@ -1,19 +1,31 @@
-"""Сервис досье: ленивый снимок датасета с расчётом рейтинга."""
+"""Сервис досье: ленивый снимок датасета, проверенный и рассчитанный scoring."""
 
 import threading
+from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import datetime
 
-from contract.utility_rating import CityRating, House, HouseRating, TimeWindow
+from contract.utility_rating import (
+    CityRating,
+    DatasetRejected,
+    House,
+    HouseRating,
+    ScoringUnavailable,
+    SourcedEvent,
+    TimeWindow,
+    UtilityCategory,
+)
 from core.config import Settings
 from core.logging import get_logger
+from sources.scoring_client import ScoringClient
 from sources.utility_rating_json import (
     UtilityRatingLoadError,
     load_utility_rating_files,
 )
-from utility_rating.dataset import parse_dataset
-from utility_rating.scoring import score_city
 
 _logger = get_logger("dossier.service", service="api")
+
+_CATEGORY_ORDER = {category: index for index, category in enumerate(UtilityCategory)}
 
 
 class DatasetUnavailable(Exception):
@@ -26,23 +38,78 @@ class HouseNotFound(Exception):
 
 @dataclass(frozen=True)
 class UtilityRatingSnapshot:
-    """Успешно рассчитанный снимок: справочник, окно и рейтинг."""
+    """Успешно рассчитанный снимок: справочник, окно, события и рейтинг."""
 
     houses: tuple[House, ...]
     window: TimeWindow
+    events: tuple[SourcedEvent, ...]
     rating: CityRating
 
 
-class UtilityRatingService:
-    """Лениво загружает датасет и кэширует только полный успешный снимок."""
+@dataclass(frozen=True)
+class HouseDossier:
+    """Досье дома: запись справочника, рейтинг и события в порядке показа."""
 
-    def __init__(self, settings: Settings) -> None:
+    house: House
+    rating: HouseRating
+    events: tuple[SourcedEvent, ...]
+
+
+def _ended_key(ended: datetime | None) -> tuple[int, datetime | None]:
+    """Ключ сортировки: известные окончания раньше продолжающихся."""
+    return (1, None) if ended is None else (0, ended)
+
+
+def _display_order(events: Iterable[SourcedEvent]) -> tuple[SourcedEvent, ...]:
+    """Начало по убыванию, затем категория, окончание и source_url по возрастанию."""
+    ordered = sorted(
+        events,
+        key=lambda item: (
+            _CATEGORY_ORDER[item.event.category],
+            _ended_key(item.event.ended_at),
+            item.source_url,
+        ),
+    )
+    # устойчивая сортировка сохраняет вторичный порядок при равном начале
+    return tuple(sorted(ordered, key=lambda item: item.event.started_at, reverse=True))
+
+
+def _log_load_failed(reason: str, exc: BaseException) -> None:
+    """Событие отказа загрузки снимка без путей и содержимого набора."""
+    _logger.error(
+        "SNAPSHOT_LOAD_FAILED",
+        "snapshot load failed",
+        reason=reason,
+        error_type=type(exc).__name__,
+    )
+
+
+class UtilityRatingService:
+    """Лениво загружает датасет и кэширует только полный успешный снимок.
+
+    scoring_client None — клиент internal scoring из Settings.scoring_url.
+    """
+
+    def __init__(
+        self, settings: Settings, scoring_client: ScoringClient | None = None
+    ) -> None:
         self._settings = settings
+        self._scoring_client = scoring_client
         self._lock = threading.Lock()
         self._snapshot: UtilityRatingSnapshot | None = None
 
+    def _client(self) -> ScoringClient:
+        """Клиент scoring; клиент по умолчанию создаётся при первом расчёте."""
+        if self._scoring_client is None:
+            self._scoring_client = ScoringClient(base_url=self._settings.scoring_url)
+        return self._scoring_client
+
     def load_snapshot(self) -> UtilityRatingSnapshot:
-        """Вернуть снимок, при необходимости загрузив и рассчитав данные."""
+        """Вернуть снимок, при необходимости загрузив и рассчитав данные.
+
+        DatasetUnavailable — файлы или набор непригодны; ScoringUnavailable —
+        сбой internal scoring.
+        """
         with self._lock:
             if self._snapshot is not None:
                 _logger.info(
@@ -54,45 +121,55 @@ class UtilityRatingService:
                 raw, schema = load_utility_rating_files(
                     self._settings.dataset_path, self._settings.schema_path
                 )
-                dataset = parse_dataset(raw, schema)
-                rating = score_city(dataset)
+                client = self._client()
+                parsed = client.parse_dataset(raw, schema)
+                rating = client.score_city(raw, schema)
             except UtilityRatingLoadError as exc:
-                _logger.error(
-                    "SNAPSHOT_LOAD_FAILED",
-                    "snapshot load failed",
-                    reason="source_read_failed",
-                    error_type=type(exc).__name__,
-                )
+                _log_load_failed("source_read_failed", exc)
                 raise DatasetUnavailable(
                     "utility rating dataset is unavailable"
                 ) from exc
-            except (TypeError, ValueError) as exc:
-                _logger.error(
-                    "SNAPSHOT_LOAD_FAILED",
-                    "snapshot load failed",
-                    reason="dataset_invalid",
-                    error_type=type(exc).__name__,
-                )
+            except DatasetRejected as exc:
+                _log_load_failed(exc.code.value, exc)
                 raise DatasetUnavailable(
                     "utility rating dataset is unavailable"
                 ) from exc
+            except ScoringUnavailable as exc:
+                _log_load_failed("scoring_unavailable", exc)
+                raise
+            if set(rating.ratings) != {house.house_id for house in parsed.houses}:
+                exc = ScoringUnavailable("scoring ratings do not match parsed houses")
+                _log_load_failed("scoring_inconsistent", exc)
+                raise exc
             snapshot = UtilityRatingSnapshot(
-                houses=dataset.houses, window=dataset.window, rating=rating
+                houses=parsed.houses,
+                window=parsed.window,
+                events=parsed.events,
+                rating=rating,
             )
             self._snapshot = snapshot
             _logger.info(
                 "SNAPSHOT_READY",
                 "snapshot ready",
-                house_count=len(dataset.houses),
-                event_count=len(dataset.events),
+                snapshot_id=parsed.snapshot_id,
+                house_count=len(parsed.houses),
+                event_count=len(parsed.events),
             )
             return snapshot
 
-    def get_house(self, house_id: str) -> tuple[House, HouseRating]:
-        """Найти дом и его рейтинг по идентификатору."""
+    def get_house(self, house_id: str) -> HouseDossier:
+        """Найти дом, его рейтинг и события по идентификатору."""
         snapshot = self.load_snapshot()
         for house in snapshot.houses:
             if house.house_id == house_id:
-                return house, snapshot.rating.ratings[house_id]
+                return HouseDossier(
+                    house=house,
+                    rating=snapshot.rating.ratings[house_id],
+                    events=_display_order(
+                        item
+                        for item in snapshot.events
+                        if item.event.house_id == house_id
+                    ),
+                )
         _logger.warning("HOUSE_NOT_FOUND", "house not found", house_id=house_id)
         raise HouseNotFound("house is not in the pilot sample")

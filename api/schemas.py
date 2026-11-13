@@ -1,10 +1,11 @@
 """HTTP-схемы ответов API коммунального рейтинга."""
 
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
-CATEGORY_NAMES = ("hot_water", "cold_water", "electricity", "heating")
+CategoryName = Literal["hot_water", "cold_water", "electricity", "heating"]
+CATEGORY_NAMES: tuple[str, ...] = get_args(CategoryName)
 
 
 class Scope(BaseModel):
@@ -67,8 +68,21 @@ class HouseListResponse(BaseModel):
     houses: list[HouseSummary]
 
 
+class HouseEvent(BaseModel):
+    """Отключение дома; ended_at null — продолжающееся событие."""
+
+    house_id: str
+    category: CategoryName
+    started_at: AwareDatetime
+    ended_at: AwareDatetime | None
+    kind: Literal["emergency", "planned"]
+    is_mass: bool
+    is_natural_disaster: bool
+    source_url: str
+
+
 class HouseDetailResponse(BaseModel):
-    """Детальное досье одного дома."""
+    """Детальное досье одного дома с событиями и худшей категорией."""
 
     scope: Scope
     window: Window
@@ -76,3 +90,5 @@ class HouseDetailResponse(BaseModel):
     address: str
     overall_score: float = Field(ge=0, le=1, allow_inf_nan=False)
     categories: HouseCategories
+    weakest: CategoryName
+    events: list[HouseEvent]

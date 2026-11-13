@@ -2,8 +2,28 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Mapping
+
+
+class DatasetRejectionCode(StrEnum):
+    """Код отказа набора: битая схема, неверный набор или неполный набор."""
+
+    SCHEMA_INVALID = "schema_invalid"
+    DATASET_INVALID = "dataset_invalid"
+    DATASET_INCOMPLETE = "dataset_incomplete"
+
+
+class DatasetRejected(ValueError):
+    """Набор или схема непригодны для расчёта; code — класс причины."""
+
+    def __init__(self, code: DatasetRejectionCode, message: str) -> None:
+        super().__init__(message)
+        self.code = DatasetRejectionCode(code)
+
+
+class ScoringUnavailable(Exception):
+    """Внутренний сервис расчёта недоступен или ответил вне протокола."""
 
 
 class UtilityCategory(str, Enum):
@@ -81,10 +101,11 @@ class CategoryRating:
 
 @dataclass(frozen=True)
 class HouseRating:
-    """Результат дома по всем категориям и общий рейтинг."""
+    """Результат дома: категории, общий рейтинг и худшая категория."""
 
     categories: Mapping[UtilityCategory, CategoryRating]
     overall_score: float
+    weakest: UtilityCategory
 
 
 @dataclass(frozen=True)
@@ -92,3 +113,21 @@ class CityRating:
     """Результат расчёта набора домов по ключу house_id."""
 
     ratings: Mapping[str, HouseRating]
+
+
+@dataclass(frozen=True)
+class SourcedEvent:
+    """Отключение вместе с адресом источника для показа в досье."""
+
+    event: OutageEvent
+    source_url: str
+
+
+@dataclass(frozen=True)
+class ParsedDataset:
+    """Проверенный расчётом набор: снимок, справочник, окно и события."""
+
+    snapshot_id: str
+    houses: tuple[House, ...]
+    window: TimeWindow
+    events: tuple[SourcedEvent, ...]

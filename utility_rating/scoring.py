@@ -80,11 +80,23 @@ def score_city(dataset: UtilityDataset) -> CityRating:
                 *metrics_by_house.get((house.house_id, category), (0.0, 0.0, 0.0))
             )
             house_categories[category] = _score_category(metrics, averages[category])
+        weakest = weakest_category(house_categories)
         ratings[house.house_id] = HouseRating(
             categories=house_categories,
-            overall_score=_overall_score(house_categories),
+            overall_score=_overall_score(house_categories, weakest),
+            weakest=weakest,
         )
     return CityRating(ratings=ratings)
+
+
+def weakest_category(
+    categories: Mapping[UtilityCategory, CategoryRating],
+) -> UtilityCategory:
+    """Худшая категория дома: минимальная оценка из четырёх.
+
+    При равенстве оценок выбирается первая в порядке UtilityCategory.
+    """
+    return min(UtilityCategory, key=lambda category: categories[category].score)
 
 
 def _validated_houses(dataset: UtilityDataset) -> tuple[House, ...]:
@@ -197,11 +209,13 @@ def _penalty(metric: float, average: float) -> float:
     return min(1.0, math.log2(metric / average) / 3.0)
 
 
-def _overall_score(categories: Mapping[UtilityCategory, CategoryRating]) -> float:
-    """Взвешенная сумма с ограничением по худшей категории."""
+def _overall_score(
+    categories: Mapping[UtilityCategory, CategoryRating], weakest: UtilityCategory
+) -> float:
+    """Взвешенная сумма с ограничением по худшей категории weakest."""
     weighted = sum(
         _CATEGORY_WEIGHTS[category] * rating.score
         for category, rating in categories.items()
     )
-    worst = min(rating.score for rating in categories.values())
+    worst = categories[weakest].score
     return min(weighted, worst + _WORST_CATEGORY_CAP_MARGIN)

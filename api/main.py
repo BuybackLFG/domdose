@@ -29,13 +29,15 @@ async def _lifespan(application: FastAPI) -> AsyncIterator[None]:
     shutdown_logging()
 
 
-def create_app(settings: Settings) -> FastAPI:
+def create_app(settings: Settings, scoring_client=None) -> FastAPI:
     """Собрать приложение с сервисом досье в app.state.
 
-    Логирование не настраивается и файлы не создаются до lifespan startup.
+    scoring_client — sources.scoring_client.ScoringClient; None — клиент
+    по Settings.scoring_url собирает dossier. Логирование не настраивается
+    и файлы не создаются до lifespan startup.
     """
     application = FastAPI(title="ДомДосье — коммунальный рейтинг", lifespan=_lifespan)
-    application.state.service = UtilityRatingService(settings)
+    application.state.service = UtilityRatingService(settings, scoring_client)
     application.include_router(router)
     register_error_handlers(application)
     return application

@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from contract.utility_rating import ScoringUnavailable
 from core.logging import get_logger
 from dossier.service import DatasetUnavailable, HouseNotFound
 
@@ -32,6 +33,22 @@ async def _dataset_unavailable_handler(
     return JSONResponse(
         status_code=503,
         content=error_body("dataset_unavailable", "utility rating dataset is unavailable"),
+    )
+
+
+async def _scoring_unavailable_handler(
+    request: Request, exc: ScoringUnavailable
+) -> JSONResponse:
+    _logger.error(
+        "HTTP_ERROR_RETURNED",
+        "http error returned",
+        status_code=503,
+        reason="scoring_unavailable",
+        error_type=type(exc).__name__,
+    )
+    return JSONResponse(
+        status_code=503,
+        content=error_body("scoring_unavailable", "utility rating scoring is unavailable"),
     )
 
 
@@ -100,6 +117,7 @@ async def _unhandled_error_handler(request: Request, exc: Exception) -> JSONResp
 def register_error_handlers(app: FastAPI) -> None:
     """Зарегистрировать обработчики доменных и сетевых ошибок."""
     app.add_exception_handler(DatasetUnavailable, _dataset_unavailable_handler)
+    app.add_exception_handler(ScoringUnavailable, _scoring_unavailable_handler)
     app.add_exception_handler(HouseNotFound, _house_not_found_handler)
     app.add_exception_handler(InvalidRequestError, _invalid_request_handler)
     app.add_exception_handler(RequestValidationError, _validation_error_handler)
