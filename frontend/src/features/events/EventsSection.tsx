@@ -128,8 +128,8 @@ function EmptyEvents() {
     <div className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-6 text-center">
       <p className="text-sm font-medium text-slate-300">Событий не найдено</p>
       <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-        По этому дому нет подтверждённых событий за период: ни отключений от ресурсных
-        организаций, ни проверенных сообщений жильцов.
+        В доступных данных нет записей о событиях по этому дому. Это не доказывает,
+        что отключений или других событий не было.
       </p>
     </div>
   )
