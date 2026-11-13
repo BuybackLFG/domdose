@@ -19,5 +19,9 @@ export const PILOT_MAP = {
   },
   width: manifest.width,
   height: manifest.height,
+  /** Детальный уровень того же кадра; включается с detailMinZoom. */
+  detailImageUrl: manifest.detail.image,
+  detailMinZoom: manifest.detail.min_zoom,
+  maxZoom: manifest.max_zoom,
   attribution: manifest.attribution,
 } as const;

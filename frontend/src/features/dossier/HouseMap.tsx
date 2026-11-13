@@ -75,6 +75,11 @@ function fitToHouses(map: L.Map, houses: readonly PlacedHouse[]): boolean {
   return true;
 }
 
+/** URL подложки для зума: детальный уровень с detailMinZoom, иначе обзорный. */
+function imageUrlForZoom(zoom: number): string {
+  return zoom >= PILOT_MAP.detailMinZoom ? PILOT_MAP.detailImageUrl : PILOT_MAP.imageUrl;
+}
+
 /** Сдвигает вид к выбранному дому, только если он вне вида или у самого края. */
 function revealHouse(map: L.Map, house: PlacedHouse | undefined, animate: boolean): void {
   if (!house || map.getBounds().pad(-VIEW_EDGE_SHARE).contains([house.lat, house.lon])) return;
@@ -115,7 +120,7 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
       attributionControl: true,
       keyboard: true,
       scrollWheelZoom: false,
-      maxZoom: 17,
+      maxZoom: PILOT_MAP.maxZoom,
       zoomSnap: 0,
       maxBounds: OVERLAY_BOUNDS,
       maxBoundsViscosity: 1,
@@ -126,8 +131,10 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
     // Prefix Leaflet по умолчанию содержит внешнюю ссылку; attribution — только текст manifest.
     map.attributionControl.setPrefix(false);
 
+    // Один оверлей на тех же bounds: при смене уровня меняется только src.
+    let currentImageUrl = imageUrlForZoom(map.getZoom());
     const overlay = L.imageOverlay(
-      PILOT_MAP.imageUrl,
+      currentImageUrl,
       OVERLAY_BOUNDS,
       {
         attribution: PILOT_MAP.attribution,
@@ -137,8 +144,17 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
     ).addTo(map);
     overlay.on('error', () => setAssetError(true));
 
+    const syncImageUrl = () => {
+      const next = imageUrlForZoom(map.getZoom());
+      if (next === currentImageUrl) return;
+      currentImageUrl = next;
+      overlay.setUrl(next);
+    };
+    map.on('zoomend', syncImageUrl);
+
     applyCoverMinZoom(map);
     map.setView(OVERLAY_BOUNDS.getCenter(), map.getMinZoom(), { animate: false });
+    syncImageUrl();
 
     // Размер контейнера может появиться или измениться позже: покрытие и начальный вид
     // пересчитываются по факту измерения.
@@ -158,6 +174,7 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
     const markers = markersRef.current;
     return () => {
       observer.disconnect();
+      map.off('zoomend', syncImageUrl);
       for (const marker of markers.values()) marker.remove();
       markers.clear();
       map.remove();

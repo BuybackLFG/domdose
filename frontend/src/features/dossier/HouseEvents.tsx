@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { categoryLabel, formatDateTime } from './format';
 import type { HouseEvent, UtilityCategory } from './types';
 
@@ -35,14 +35,29 @@ function eventKey(event: HouseEvent, index: number): string {
 export function HouseEvents({ events }: HouseEventsProps) {
   const [filter, setFilter] = useState<EventFilter>('all');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
+  // Индекс первого пункта, показанного последним нажатием «Показать ещё».
+  const pendingFocusIndexRef = useRef<number | null>(null);
 
   const filtered = events.filter((event) => matchesFilter(event, filter));
   const visible = filtered.slice(0, visibleCount);
 
   const selectFilter = (next: EventFilter) => {
+    pendingFocusIndexRef.current = null;
     setFilter(next);
     setVisibleCount(PAGE_SIZE);
   };
+
+  useEffect(() => {
+    const index = pendingFocusIndexRef.current;
+    if (index === null) return;
+    pendingFocusIndexRef.current = null;
+    // Кнопка ещё на месте: фокус остаётся на ней.
+    if (moreButtonRef.current !== null) return;
+    const item = listRef.current?.children[index];
+    if (item instanceof HTMLElement) item.focus();
+  }, [visibleCount]);
 
   return (
     <section aria-labelledby="house-events-heading" className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-border sm:p-5">
@@ -83,9 +98,9 @@ export function HouseEvents({ events }: HouseEventsProps) {
               Нет событий этой категории за период.
             </p>
           ) : (
-            <ul aria-label="События дома" className="mt-3 space-y-2">
+            <ul ref={listRef} aria-label="События дома" className="mt-3 space-y-2">
               {visible.map((event, index) => (
-                <li key={eventKey(event, index)} className="rounded-xl border border-border bg-surface-subtle px-3 py-2">
+                <li key={eventKey(event, index)} tabIndex={-1} className="rounded-xl border border-border bg-surface-subtle px-3 py-2">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-sm font-medium text-text">{categoryLabel(event.category)}</p>
@@ -125,8 +140,12 @@ export function HouseEvents({ events }: HouseEventsProps) {
 
           {visible.length < filtered.length && (
             <button
+              ref={moreButtonRef}
               type="button"
-              onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+              onClick={() => {
+                pendingFocusIndexRef.current = visibleCount;
+                setVisibleCount((count) => count + PAGE_SIZE);
+              }}
               className="mt-3 min-h-11 rounded-xl border border-border bg-surface px-4 text-sm font-medium text-accent transition hover:border-accent hover:bg-surface-subtle"
             >
               Показать ещё
