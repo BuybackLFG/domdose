@@ -2,14 +2,14 @@
 
 Файл `dataset/output/utility-rating.json` собран адаптером
 `sources/legacy_dataset.py` из старой выгрузки
-`ДомДосье/raw/events_parsed.json` (источник: объявления vl.ru/off) поверх
+`dataset/legacy/events_parsed.json` (источник: объявления vl.ru/off) поверх
 текущего draft (`dataset/pilot_dataset_draft.json`: houses, window, registry).
 
 ## Командa воспроизведения
 
 ```powershell
 .venv\Scripts\python.exe -m sources.legacy_dataset `
-  --legacy C:\Progg\Development\ДомДосье\raw\events_parsed.json `
+  --legacy dataset\legacy\events_parsed.json `
   --current dataset\pilot_dataset_draft.json `
   --output dataset\output\utility-rating.json
 ```
