@@ -23,6 +23,24 @@ checkout; прочие выгрузки в `dataset/output/` не коммитя
 выборке, а не ко всему городу. Без полного набора приложение показывает отсутствие
 данных, а не тестовые значения.
 
+## Быстрый старт
+
+Нужен только Docker с Compose v2. Всё необходимое для запуска лежит в репозитории:
+датасет `dataset/output/utility-rating.json`, подложка карты `frontend/public/maps/`,
+точные версии зависимостей `constraints.txt` и `frontend/package-lock.json`. Сеть нужна
+только на этапе сборки образов (pip, npm, базовые образы); во время работы сервисы во
+внешний интернет не обращаются.
+
+```powershell
+git clone <url репозитория> domdossier
+cd domdossier
+git checkout <ветка>
+docker compose up -d --build
+docker compose ps
+```
+
+Приложение: http://127.0.0.1:8080. Подробности — в разделе «Docker Compose».
+
 ## Стек
 
 ### Backend
@@ -145,9 +163,12 @@ npm run dev
 `npm run dev` поднимает Vite на порту 5173 и проксирует `/api` на
 `http://127.0.0.1:8000` (локальный uvicorn).
 
-Изображение карты — локальный asset `frontend/public/maps/vladivostok-pilot.png` с
-манифестом `vladivostok-pilot.manifest.json`. Источник, лицензия, bbox и команда
-воспроизведения — в `map-preparation/README.md`.
+Подложка карты — локальные assets одного кадра 2:1 в `frontend/public/maps/`: обзорный
+уровень `vladivostok-pilot.png`, детальный `vladivostok-pilot-detail.png` и манифест
+`vladivostok-pilot.manifest.json` (bounds, `detail.min_zoom`, `max_zoom`). Leaflet держит один
+`L.imageOverlay` и подменяет его источник на детальный уровень при зуме не меньше
+`detail.min_zoom`. Источник, лицензия, рамка и команды воспроизведения — в
+`map-preparation/README.md`.
 
 ## Переменные окружения
 
