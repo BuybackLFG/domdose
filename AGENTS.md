@@ -454,7 +454,7 @@ u-architect -> u-explorer / u-planner -> u-tester -> u-executor -> u-reviewer ->
 py -3.13 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .venv\Scripts\python.exe -m pytest
-.venv\Scripts\python.exe -m ruff check api contract core dossier sources utility_rating tests
+.venv\Scripts\python.exe -m ruff check api contract core dossier sources utility_rating tests map-preparation
 .venv\Scripts\python.exe -m uvicorn api.main:app --port 8000
 ```
 

@@ -109,7 +109,7 @@ Lockfile создан Node.js 24 и npm 11.
 py -3.13 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .venv\Scripts\python.exe -m pytest
-.venv\Scripts\python.exe -m ruff check api contract core dossier sources utility_rating tests
+.venv\Scripts\python.exe -m ruff check api contract core dossier sources utility_rating tests map-preparation
 ```
 
 Чтобы версии прикладных пакетов локального окружения совпали с образами, установку
