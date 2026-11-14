@@ -78,17 +78,11 @@ main > :is(section, .section)[data-screen="free"] > :is(.wrap, .container) { hei
 .hero__copy { grid-column: 1 / span 5; align-self: start; }
 .hero__media {
   grid-column: 7 / -1;
-  height: 100%; min-height: 0;
+  height: auto; align-self: start; min-height: 0;
   background: transparent; border: 0;
 }
 .hero__copy > .hero__kicker { margin-bottom: 0; }
 .hero__lead { color: var(--ink); }
-.hero__note {
-  max-width: 44ch;
-  color: var(--muted);
-  font-size: var(--t-small);
-  line-height: 1.55;
-}
 .hero #search { margin-top: var(--s-5); }
 
 @media (max-width: 1023px) {
@@ -168,7 +162,7 @@ main > :is(section, .section)[data-screen="free"] > :is(.wrap, .container) { hei
 /* ---------------------------------------------------------------- окно досье в герое */
 .dossier-window {
   display: flex; flex-direction: column;
-  height: 100%; min-height: 0;
+  height: auto; min-height: 0;
   border: 1px solid var(--line-strong);
   border-radius: var(--r-lg);
   background: var(--bg);
@@ -195,7 +189,7 @@ main > :is(section, .section)[data-screen="free"] > :is(.wrap, .container) { hei
   display: flex; flex-direction: column; gap: var(--s-4);
   flex: 1; min-height: 0;
   padding: var(--s-5);
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 .dossier-window__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-4); }
 .dossier-window__addr { font-weight: 500; font-size: var(--t-card); line-height: 1.35; }
@@ -267,7 +261,6 @@ main > :is(section, .section)[data-screen="free"] > :is(.wrap, .container) { hei
   .dossier-window__note { display: none; }
   .dossier-window__score b { font-size: 44px; }
   .win-event { padding: 7px 0; }
-  .hero__note { display: none; }
   .hero__media .dossier-window { min-height: 286px; }
 }
 

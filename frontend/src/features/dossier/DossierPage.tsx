@@ -112,11 +112,6 @@ export function DossierPage() {
                     onSelect={selectHouse}
                   />
                 </div>
-
-                <p className="hero__note">
-                  Полнота журнала неизвестна: отсутствие записей не означает отсутствие отключений.
-                  Рейтинг описывает только эти дома.
-                </p>
               </div>
 
               <div className="hero__media">
