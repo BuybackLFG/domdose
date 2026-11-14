@@ -74,7 +74,7 @@ export function DossierPage() {
             <a className="nav__link" href="#events">События</a>
           </nav>
           <div className="nav__actions">
-            <a className="btn btn--primary btn--sm" href="#search">Найти дом</a>
+            <a className="btn btn--primary btn--sm" href="#top">Найти дом</a>
           </div>
           <button
             className="nav__toggle"
@@ -254,7 +254,7 @@ export function DossierPage() {
               </p>
             </div>
             <div className="btn-row">
-              <a className="btn btn--primary" href="#search">Найти дом</a>
+              <a className="btn btn--primary" href="#top">Найти дом</a>
               <a className="btn btn--secondary" href="#houses">Все дома</a>
             </div>
             <p className="footer__lede">

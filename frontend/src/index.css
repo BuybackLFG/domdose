@@ -75,6 +75,12 @@ main > :is(section, .section)[data-screen="free"] > :is(.wrap, .container) { hei
 .nav__logo { font-weight: 500; letter-spacing: -0.03em; }
 
 /* ---------------------------------------------------------------- герой */
+/* Герой по высоте содержимого: без пустого экрана под поиском и окном досье. */
+main > .hero.hero--split {
+  height: auto;
+  min-height: 0;
+}
+
 .hero__copy { grid-column: 1 / span 5; align-self: start; }
 .hero__media {
   grid-column: 7 / -1;
@@ -84,6 +90,7 @@ main > :is(section, .section)[data-screen="free"] > :is(.wrap, .container) { hei
 .hero__copy > .hero__kicker { margin-bottom: 0; }
 .hero__lead { color: var(--ink); }
 .hero #search { margin-top: var(--s-5); }
+#search { scroll-margin-top: calc(var(--nav) + var(--s-4)); }
 
 @media (max-width: 1023px) {
   .hero__copy { grid-column: 1 / -1; }
