@@ -381,8 +381,11 @@ export interface components {
              * @description Ссылка на открытый источник (http/https)
              */
             source_url: string;
-            /** Confidence */
-            confidence?: number | null;
+            /**
+             * Confidence
+             * @default 1
+             */
+            confidence: number | null;
             /** @default official */
             kind: components["schemas"]["EventKind"];
             /** Match */
