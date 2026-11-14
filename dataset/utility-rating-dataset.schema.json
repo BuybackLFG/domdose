@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Минимальный набор данных скоринга коммунальной надёжности Владивостока",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "city",
+    "window",
+    "registry_source_url",
+    "registry_complete",
+    "houses",
+    "coverage",
+    "events"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "city": {
+      "type": "string",
+      "const": "Владивосток"
+    },
+    "window": {
+      "$ref": "#/$defs/window"
+    },
+    "registry_source_url": {
+      "$ref": "#/$defs/sourceUrl"
+    },
+    "registry_complete": {
+      "type": "boolean"
+    },
+    "houses": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/house"
+      }
+    },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    },
+    "events": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "registry_complete"
+        ],
+        "properties": {
+          "registry_complete": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "houses": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "registry_complete"
+        ],
+        "properties": {
+          "registry_complete": {
+            "const": false
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "houses": {
+            "maxItems": 0
+          },
+          "events": {
+            "maxItems": 0
+          },
+          "coverage": {
+            "required": [
+              "hot_water",
+              "cold_water",
+              "electricity",
+              "heating"
+            ],
+            "properties": {
+              "hot_water": {
+                "const": "incomplete"
+              },
+              "cold_water": {
+                "const": "incomplete"
+              },
+              "electricity": {
+                "const": "incomplete"
+              },
+              "heating": {
+                "const": "incomplete"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sourceUrl": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 2048,
+      "pattern": "^https?://[^/?#\\s]+/[^?#\\s]+(?:\\?[^#\\s]*)?(?:#[^\\s]*)?$"
+    },
+    "vladivostokDateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?\\+10:00$"
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/vladivostokDateTime"
+        },
+        "end": {
+          "$ref": "#/$defs/vladivostokDateTime"
+        }
+      }
+    },
+    "house": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "house_id",
+        "address"
+      ],
+      "properties": {
+        "house_id": {
+          "type": "string",
+          "pattern": "^house_[0-9]{6}$"
+        },
+        "address": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 300,
+          "pattern": "^Владивосток, \\S(?:[^\\r\\n]*\\S)?$"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hot_water",
+        "cold_water",
+        "electricity",
+        "heating"
+      ],
+      "properties": {
+        "hot_water": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "incomplete"
+          ]
+        },
+        "cold_water": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "incomplete"
+          ]
+        },
+        "electricity": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "incomplete"
+          ]
+        },
+        "heating": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "incomplete"
+          ]
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "house_id",
+        "category",
+        "started_at",
+        "ended_at",
+        "kind",
+        "is_mass",
+        "is_natural_disaster",
+        "source_url"
+      ],
+      "properties": {
+        "house_id": {
+          "type": "string",
+          "pattern": "^house_[0-9]{6}$"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "hot_water",
+            "cold_water",
+            "electricity",
+            "heating"
+          ]
+        },
+        "started_at": {
+          "$ref": "#/$defs/vladivostokDateTime"
+        },
+        "ended_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/vladivostokDateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "emergency",
+            "planned"
+          ]
+        },
+        "is_mass": {
+          "type": "boolean"
+        },
+        "is_natural_disaster": {
+          "type": "boolean"
+        },
+        "source_url": {
+          "$ref": "#/$defs/sourceUrl"
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,10 @@
-node_modules/
-dist/
-.env
+node_modules
+dist
+coverage
+.artifacts
 *.tsbuildinfo
+**/*.log
+**/.env
+**/.env.*
+Dockerfile
+.dockerignore

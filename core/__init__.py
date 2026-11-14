@@ -1,1 +1,1 @@
-"""Process configuration and explicit logging setup for DomDose."""
+"""Базовые зоны приложения: настройки и логирование."""

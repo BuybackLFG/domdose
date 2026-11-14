@@ -1,0 +1,5 @@
+exclude = [".venv", ".artifacts"]
+target-version = "py313"
+
+[lint]
+select = ["F", "E9", "W605", "B"]

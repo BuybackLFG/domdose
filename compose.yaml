@@ -1,0 +1,111 @@
+# Локальный offline-контур ДомДосье: три сервиса приложения.
+# Наружу на loopback хоста публикуется только frontend; api и scoring живут
+# только во внутренней сети без host ports. Внешний интернет в runtime не нужен.
+name: domdossier
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    environment:
+      DOMDOSSE_SCORING_URL: http://scoring:8001
+      DOMDOSSE_UTILITY_RATING_DATASET_PATH: /data/dataset/utility-rating.json
+      DOMDOSSE_UTILITY_RATING_SCHEMA_PATH: /app/dataset/utility-rating-dataset.schema.json
+      DOMDOSSE_LOG_FILE_PATH: /var/log/domdossier/execution.log
+    volumes:
+      - api_logs:/var/log/domdossier
+      - "${DOMDOSSE_DATASET_DIR:-./dataset/output}:/data/dataset:ro"
+    networks:
+      - internal
+    depends_on:
+      scoring:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request as r; [r.urlopen('http://127.0.0.1:8000' + p, timeout=3) for p in ('/api/health', '/api/ready')]"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 2s
+    stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  scoring:
+    build:
+      context: .
+      dockerfile: api/scoring.Dockerfile
+    environment:
+      DOMDOSSE_LOG_FILE_PATH: /var/log/domdossier/execution.log
+    volumes:
+      - scoring_logs:/var/log/domdossier
+    networks:
+      - internal
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request as r; [r.urlopen('http://127.0.0.1:8001' + p, timeout=3) for p in ('/health', '/ready')]"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 2s
+    stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - frontend_logs:/var/log/domdossier
+    networks:
+      - internal
+      - edge
+    # Только запуск api, не готовность: при отсутствующем или битом наборе
+    # frontend всё равно стартует и отдаёт 503 с кодом причины вместо SPA.
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q -O /dev/null http://127.0.0.1/health && wget -q -O /dev/null http://127.0.0.1/ready && wget -q -O /dev/null http://127.0.0.1/maps/vladivostok-pilot.png
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 2s
+    stop_grace_period: 30s
+
+networks:
+  internal:
+    internal: true
+  # Docker не публикует порт контейнера, подключённого только к internal-сети;
+  # edge нужна frontend только для публикации 127.0.0.1:8080; других сервисов в ней нет.
+  edge: {}
+
+volumes:
+  api_logs:
+  scoring_logs:
+  frontend_logs:
