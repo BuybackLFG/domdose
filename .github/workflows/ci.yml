@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements-dev.txt -c constraints.txt
+      - run: python -m ruff check api contract core dossier sources utility_rating tests map-preparation
+      - run: python -m pytest -q
+
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run build
+
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements-dev.txt -c constraints.txt
+      - run: python -m pytest -q tests/test_scoring_boundary_contract.py tests/test_api_utility_rating.py
+
+  production-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: domdose-ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build and start deployed stack
+        run: |
+          docker compose config -q
+          docker compose up -d --build --wait --wait-timeout 180
+          docker compose ps
+      - name: Check service health, published ports and map assets
+        run: |
+          python3 <<'PY'
+          import json, subprocess
+          services = ('api', 'scoring', 'frontend')
+          for service in services:
+              cid = subprocess.check_output(['docker', 'compose', 'ps', '-q', service], text=True).strip()
+              assert cid, f'{service} missing'
+              data = json.loads(subprocess.check_output(['docker', 'inspect', cid], text=True))[0]
+              assert data['State']['Health']['Status'] == 'healthy', service
+              ports = data['NetworkSettings']['Ports'] or {}
+              bindings = [(port, binding) for port, items in ports.items() for binding in (items or [])]
+              if service == 'frontend':
+                  assert bindings == [('80/tcp', {'HostIp': '127.0.0.1', 'HostPort': '8080'})], bindings
+              else:
+                  assert not bindings, (service, bindings)
+          PY
+          curl -fsS http://127.0.0.1:8080/health
+          curl -fsS http://127.0.0.1:8080/ready
+          curl -fsS http://127.0.0.1:8080/api/ready
+          for asset in vladivostok-pilot.png vladivostok-pilot-detail.png vladivostok-pilot.manifest.json; do
+            curl -fsS "http://127.0.0.1:8080/maps/$asset" -o /dev/null
+          done
+      - name: Exercise real browser, search and dossier
+        run: |
+          mkdir -p /tmp/domdose-browser
+          cd /tmp/domdose-browser
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+          node <<'JS'
+          const { chromium } = require('playwright');
+          const assert = require('node:assert/strict');
+          (async () => {
+            const browser = await chromium.launch({headless: true});
+            try {
+              const page = await browser.newPage();
+              page.setDefaultTimeout(30000);
+              const base = 'http://127.0.0.1:8080';
+              const listResponse = page.waitForResponse(r => new URL(r.url()).pathname === '/api/houses');
+              assert.equal((await page.goto(base)).status(), 200);
+              const response = await listResponse;
+              assert.equal(response.status(), 200);
+              const list = await response.json();
+              assert.equal(list.houses.length, 20);
+              const target = list.houses[1];
+              const input = page.getByRole('combobox', {name: 'Найти адрес'});
+              await input.fill(target.address);
+              const detailResponse = page.waitForResponse(r => new URL(r.url()).pathname === `/api/houses/${target.house_id}`);
+              await page.getByRole('option', {name: target.address, exact: true}).click();
+              const detailResult = await detailResponse;
+              assert.equal(detailResult.status(), 200);
+              const detail = await detailResult.json();
+              assert.equal(detail.house_id, target.house_id);
+              assert.equal(detail.address, target.address);
+              assert.ok(Number.isFinite(detail.overall_score));
+              assert.equal(Object.keys(detail.categories).length, 4);
+              await page.getByRole('heading', {name: target.address, exact: true}).waitFor();
+              const summary = page.locator('section').filter({has: page.getByRole('heading', {name: target.address, exact: true})});
+              const score = value => (value * 100).toLocaleString('ru-RU', {maximumFractionDigits: 1});
+              await summary.locator('p.text-3xl').waitFor();
+              assert.equal((await summary.locator('p.text-3xl').innerText()).replace(/\s+/g, ''), `${score(detail.overall_score)}/100`);
+              const categories = page.locator('section').filter({has: page.getByRole('heading', {name: 'Оценки категорий', exact: true})});
+              for (const [key, label] of Object.entries({hot_water: 'Горячая вода', cold_water: 'Холодная вода', electricity: 'Электричество', heating: 'Отопление'})) {
+                assert.ok(Number.isFinite(detail.categories[key].score));
+                const card = categories.locator('article').filter({has: page.getByRole('heading', {name: label, exact: true})});
+                await card.locator('p.text-2xl').waitFor();
+                assert.equal((await card.locator('p.text-2xl').innerText()).replace(/\s+/g, ''), `${score(detail.categories[key].score)}/100`);
+                for (const metric of ['frequency', 'hours', 'longest']) assert.ok(Number.isFinite(detail.categories[key].metrics[metric]));
+              }
+              await page.getByRole('heading', {name: /События дома/}).waitFor();
+              assert.ok(Array.isArray(detail.events));
+              assert.ok(await page.locator('img.leaflet-image-layer').count(), 'map overlay missing');
+              const overlay = page.locator('img.leaflet-image-layer').first();
+              await overlay.waitFor({state: 'visible'});
+              await page.waitForFunction(() => { const img = document.querySelector('img.leaflet-image-layer'); return img && img.complete && img.naturalWidth > 0; });
+            } finally { await browser.close(); }
+          })().catch(error => { console.error(error); process.exit(1); });
+          JS
+      - name: Verify dataset failure closes readiness and SPA gate
+        run: |
+          mkdir -p "$RUNNER_TEMP/missing-dataset"
+          DOMDOSSE_DATASET_DIR="$RUNNER_TEMP/missing-dataset" docker compose up -d --no-deps --force-recreate api
+          for i in $(seq 1 60); do
+            status=$(curl -s -D /tmp/api-headers -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/ready || true)
+            [ "$status" = 503 ] && grep -qi '^X-DomDossier-Error: dataset_unavailable' /tmp/api-headers && break
+            sleep 1
+          done
+          test "$status" = 503
+          grep -qi '^X-DomDossier-Error: dataset_unavailable' /tmp/api-headers
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/ready)" = 503
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)" = 503
+          curl -sD /tmp/gate-headers http://127.0.0.1:8080/ -o /tmp/gate-body
+          grep -qi '^X-DomDossier-Error: dataset_unavailable' /tmp/gate-headers
+          ! grep -q 'id="root"' /tmp/gate-body
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop test stack
+        if: always()
+        run: docker compose down --remove-orphans
