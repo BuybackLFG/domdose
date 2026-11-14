@@ -1,25 +1,46 @@
-# зависимости
-node_modules/
-.venv/
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
 dist/
-build/
-*.egg-info/
+coverage/
 *.tsbuildinfo
 
-# локальные данные и секреты
+# Local configuration and secrets
 .env
-*.db
+.env.*
+!.env.example
+
+# Runtime data and local artifacts
+.artifacts/
+.playwright-mcp/
+logs/
+*.log
+*.sqlite
 *.sqlite3
+dataset/*.json
+!dataset/utility-rating-dataset.schema.json
+dataset/output/*.json
+# Утверждённый владельцем MVP-набор отслеживается; прочие выгрузки — нет.
+!dataset/output/utility-rating.json
+/output/
+
+# Map preparation inputs and intermediates
+*.osm.pbf
+map-preparation/*.json
+
+# Editors and OS
+.idea/
+.vscode/
 .DS_Store
-
-# сгенерированное типами не считаем — api.ts коммитим намеренно
-
-# локальное окружение самостоятельной библиотеки
-.local/
-.dsh/
-pip-build-env-*/
-pip-build-tracker-*/
+Thumbs.db

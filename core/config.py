@@ -1,98 +1,76 @@
-"""Project settings: the single place that reads environment configuration.
+"""Настройки приложения из переменных окружения."""
 
-Environment names are the uppercase field names. An explicit argument overrides
-the environment, which overrides a UTF-8 ``.env`` in the working directory,
-which overrides the declared defaults. Unknown constructor and dotenv fields
-are refused; unrelated environment variables are ignored.
-
-A refused construction is reported as :class:`SettingsRefused` without input
-values, unknown field names or the original exception chain.
-"""
-
-from __future__ import annotations
-
-from functools import lru_cache
+import os
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from urllib.parse import urlsplit
 
-from pydantic import ValidationError, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+
+_DATASET_ENV = "DOMDOSSE_UTILITY_RATING_DATASET_PATH"
+_SCHEMA_ENV = "DOMDOSSE_UTILITY_RATING_SCHEMA_PATH"
+_SCORING_URL_ENV = "DOMDOSSE_SCORING_URL"
+
+_DEFAULT_DATASET_PATH = _REPO_ROOT / "dataset" / "output" / "utility-rating.json"
+_DEFAULT_SCHEMA_PATH = _REPO_ROOT / "dataset" / "utility-rating-dataset.schema.json"
+_DEFAULT_SCORING_URL = "http://127.0.0.1:8001"
+_SCORING_URL_SCHEMES = frozenset({"http", "https"})
 
 
-class SettingsRefused(Exception):
-    """Refused settings construction with only safe, machine-readable facts.
+def validate_scoring_url(url: str) -> str:
+    """Проверить базовый URL internal scoring и вернуть его.
 
-    ``error`` names the originating exception class. ``problems`` maps a
-    declared field to its first validation error code. ``undeclared`` counts
-    errors outside declared fields. Input values and original exception chains
-    are never carried.
+    Допустимы только http/https с хостом, без credentials, query,
+    fragment и пробельных символов; иначе ValueError.
     """
-
-    def __init__(self, error: str, problems: dict[str, str], undeclared: int) -> None:
-        super().__init__(f"settings refused: {error}")
-        self.error = error
-        self.problems = problems
-        self.undeclared = undeclared
-
-
-def _is_blank(value: str) -> bool:
-    """Whether a string has no character outside whitespace."""
-    return not any(not character.isspace() for character in value)
-
-
-def _census(error: ValidationError) -> tuple[dict[str, str], int]:
-    """Declared field/code pairs and the count of errors outside fields."""
-    problems: dict[str, str] = {}
-    undeclared = 0
-    for found in error.errors(
-        include_url=False, include_input=False, include_context=False
-    ):
-        location = found.get("loc", ())
-        name = location[0] if location else None
-        if isinstance(name, str) and name in Settings.model_fields:
-            problems.setdefault(name, str(found.get("type", "validation")))
-        else:
-            undeclared += 1
-    return problems, undeclared
+    if not isinstance(url, str) or not url or any(char.isspace() for char in url):
+        raise ValueError("scoring url must be a non-empty string without spaces")
+    parts = urlsplit(url)
+    if parts.scheme not in _SCORING_URL_SCHEMES:
+        raise ValueError("scoring url scheme must be http or https")
+    if "@" in parts.netloc:
+        raise ValueError("scoring url must not contain credentials")
+    if "?" in url or "#" in url:
+        raise ValueError("scoring url must not contain query or fragment")
+    if not parts.hostname:
+        raise ValueError("scoring url must contain a host")
+    # чтение port поднимает ValueError на нечисловом или вне 0..65535
+    if parts.port == 0:
+        raise ValueError("scoring url port must be positive")
+    return url
 
 
-class Settings(BaseSettings):
-    """Frozen process settings: log level and optional log file."""
+@dataclass(frozen=True)
+class Settings:
+    """Пути к файлам датасета и схемы, базовый URL internal scoring."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="forbid",
-        frozen=True,
-        hide_input_in_errors=True,
+    dataset_path: Path
+    schema_path: Path
+    scoring_url: str = _DEFAULT_SCORING_URL
+
+    def __post_init__(self) -> None:
+        validate_scoring_url(self.scoring_url)
+
+
+def _resolve(path: str) -> Path:
+    """Относительные пути трактовать от корня репозитория."""
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return candidate
+    return _REPO_ROOT / candidate
+
+
+def load_scoring_url() -> str:
+    """Базовый URL internal scoring из DOMDOSSE_SCORING_URL с проверкой."""
+    return validate_scoring_url(
+        os.environ.get(_SCORING_URL_ENV, _DEFAULT_SCORING_URL)
     )
 
-    log_level: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] = "INFO"
-    log_file: Path | None = None
 
-    @field_validator("log_file", mode="before")
-    @classmethod
-    def _blank_file_is_none(cls, value: object) -> object:
-        """An empty or whitespace-only log file means no file output."""
-        if isinstance(value, str) and _is_blank(value):
-            return None
-        return value
-
-    def __init__(self, **values: Any) -> None:
-        try:
-            super().__init__(**values)
-        except Exception as exc:
-            error = type(exc).__name__
-            problems, undeclared = (
-                _census(exc) if isinstance(exc, ValidationError) else ({}, 0)
-            )
-        else:
-            return
-        # Raised outside the handler: the original exception chain is dropped.
-        raise SettingsRefused(error, problems, undeclared)
-
-
-@lru_cache(maxsize=1)
-def get_settings() -> Settings:
-    """Return the process settings cached after the first successful build."""
-    return Settings()
+def load_settings() -> Settings:
+    """Собрать настройки из окружения; файлы здесь не читаются."""
+    return Settings(
+        dataset_path=_resolve(os.environ.get(_DATASET_ENV, str(_DEFAULT_DATASET_PATH))),
+        schema_path=_resolve(os.environ.get(_SCHEMA_ENV, str(_DEFAULT_SCHEMA_PATH))),
+        scoring_url=load_scoring_url(),
+    )

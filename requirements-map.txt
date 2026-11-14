@@ -1,0 +1,10 @@
+# Офлайн-подготовка подложки карты (map-preparation/); не зависимость приложения.
+certifi==2026.10.23
+charset-normalizer==3.5.2
+idna==3.20
+numpy==2.5.4
+osmium==4.3.2
+pillow==13.0.0
+requests==2.34.2
+shapely==2.2.0
+urllib3==2.8.0
