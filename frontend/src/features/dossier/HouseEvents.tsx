@@ -11,6 +11,7 @@ const FILTERS: readonly EventFilter[] = ['all', 'hot_water', 'cold_water', 'elec
 interface HouseEventsProps {
   /** События в порядке ответа API: от новых к старым. */
   events: readonly HouseEvent[];
+  status: 'loading' | 'error' | 'success';
 }
 
 function filterLabel(filter: EventFilter): string {
@@ -32,7 +33,7 @@ function eventKey(event: HouseEvent, index: number): string {
   ].join('|');
 }
 
-export function HouseEvents({ events }: HouseEventsProps) {
+export function HouseEvents({ events, status }: HouseEventsProps) {
   const [filter, setFilter] = useState<EventFilter>('all');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const listRef = useRef<HTMLUListElement | null>(null);
@@ -60,99 +61,128 @@ export function HouseEvents({ events }: HouseEventsProps) {
   }, [visibleCount]);
 
   return (
-    <section aria-labelledby="house-events-heading" className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-border sm:p-5">
-      <h2 id="house-events-heading" className="text-base font-semibold text-text">
-        События дома
-      </h2>
+    <section id="events" aria-labelledby="house-events-heading" className="section" data-screen="free">
+      <div className="wrap">
+        <div className="section-head">
+          <h2 id="house-events-heading">События дома</h2>
+          <p className="t-small muted">
+            Записи из публичных объявлений за период выборки. Пустой список не доказывает
+            отсутствие отключений.
+          </p>
+        </div>
 
-      {events.length === 0 ? (
-        <p className="mt-3 rounded-xl bg-surface-subtle px-3 py-2 text-sm text-text-secondary">
-          В использованном источнике нет зафиксированных отключений за период. Это не доказывает
-          их отсутствие.
-        </p>
-      ) : (
-        <>
-          <div role="group" aria-label="Фильтр событий" className="mt-3 flex flex-wrap gap-2">
-            {FILTERS.map((option) => {
-              const selected = option === filter;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => selectFilter(option)}
-                  className={`min-h-9 rounded-full border px-3 text-sm font-medium transition ${
-                    selected
-                      ? 'border-accent bg-accent text-white'
-                      : 'border-border bg-surface text-text hover:border-accent hover:bg-surface-subtle'
-                  }`}
-                >
-                  {filterLabel(option)}
-                </button>
-              );
-            })}
+        {status === 'loading' && (
+          <div role="status" className="stack-5">
+            <p className="loading-pulse t-small muted">Загружаем события…</p>
+            <div aria-hidden="true" className="stack-3">
+              {Array.from({ length: 5 }, (_, index) => (
+                <div key={index} className="skeleton" style={{ height: 44 }} />
+              ))}
+            </div>
           </div>
+        )}
 
-          {filtered.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-surface-subtle px-3 py-2 text-sm text-text-secondary">
-              В источнике не найдено записей этой категории за период.
+        {status === 'error' && (
+          <div className="state-block state-block--error" role="status">
+            <h3>События недоступны</h3>
+            <p>Досье дома не загрузилось, поэтому список событий не подменяется пустым.</p>
+          </div>
+        )}
+
+        {status === 'success' && (
+          events.length === 0 ? (
+            <p className="search__message">
+              В использованном источнике нет зафиксированных отключений за период. Это не
+              доказывает их отсутствие.
             </p>
           ) : (
-            <ul ref={listRef} aria-label="События дома" className="mt-3 space-y-2">
-              {visible.map((event, index) => (
-                <li key={eventKey(event, index)} tabIndex={-1} className="rounded-xl border border-border bg-surface-subtle px-3 py-2">
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-text">{categoryLabel(event.category)}</p>
-                      <p className="mt-1 text-sm text-text-secondary">
-                        {formatDateTime(event.started_at)} —{' '}
-                        {event.ended_at === null ? 'Продолжается' : formatDateTime(event.ended_at)}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      <span className="rounded-full bg-surface px-2 py-1 text-xs text-text-secondary ring-1 ring-border">
-                        {event.kind === 'emergency' ? 'Аварийное' : 'Плановое'}
-                      </span>
-                      {event.is_mass && (
-                        <span className="rounded-full bg-accent-soft px-2 py-1 text-xs text-accent ring-1 ring-accent/20">
-                          Массовое
-                        </span>
-                      )}
-                      {event.is_natural_disaster && (
-                        <span className="rounded-full bg-warning/10 px-2 py-1 text-xs text-warning ring-1 ring-warning/25">
-                          Стихийное
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <a
-                    href={event.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="mt-2 inline-block text-xs font-medium text-accent hover:text-accent-hover"
-                  >
-                    Источник
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
+            <div className="events-layout">
+              <div className="events-aside">
+                <div role="group" aria-label="Фильтр событий" className="filter-row">
+                  {FILTERS.map((option) => {
+                    const selected = option === filter;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        aria-pressed={selected}
+                        data-cat={option === 'all' ? undefined : option}
+                        onClick={() => selectFilter(option)}
+                        className="filter-chip"
+                      >
+                        {option !== 'all' && <i aria-hidden="true" />}
+                        {filterLabel(option)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="t-small muted">
+                  {filtered.length === 0
+                    ? 'По этому фильтру записей нет.'
+                    : `Показано ${Math.min(visible.length, filtered.length)} из ${filtered.length}.`}
+                </p>
+              </div>
 
-          {visible.length < filtered.length && (
-            <button
-              ref={moreButtonRef}
-              type="button"
-              onClick={() => {
-                pendingFocusIndexRef.current = visibleCount;
-                setVisibleCount((count) => count + PAGE_SIZE);
-              }}
-              className="mt-3 min-h-11 rounded-xl border border-border bg-surface px-4 text-sm font-medium text-accent transition hover:border-accent hover:bg-surface-subtle"
-            >
-              Показать ещё
-            </button>
-          )}
-        </>
-      )}
+              <div className="events-main">
+                {filtered.length === 0 ? (
+                  <p className="search__message">
+                    В источнике не найдено записей этой категории за период.
+                  </p>
+                ) : (
+                  <ul ref={listRef} aria-label="События дома" className="event-list">
+                    {visible.map((event, index) => (
+                      <li key={eventKey(event, index)} tabIndex={-1} className="event-item" data-cat={event.category}>
+                        <span className="event-item__dot" aria-hidden="true" />
+                        <div>
+                          <p className="event-item__title">{categoryLabel(event.category)}</p>
+                          <p className="event-item__time">
+                            {formatDateTime(event.started_at)}
+                            {' — '}
+                            {event.ended_at === null ? 'Продолжается' : formatDateTime(event.ended_at)}
+                          </p>
+                          <a
+                            href={event.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="event-item__source"
+                          >
+                            Источник
+                          </a>
+                        </div>
+                        <div className="event-item__side">
+                          <div className="event-tags">
+                            <span className="event-tag">
+                              {event.kind === 'emergency' ? 'Аварийное' : 'Плановое'}
+                            </span>
+                            {event.is_mass && <span className="event-tag event-tag--accent">Массовое</span>}
+                            {event.is_natural_disaster && (
+                              <span className="event-tag event-tag--warn">Стихийное</span>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {visible.length < filtered.length && (
+                  <button
+                    ref={moreButtonRef}
+                    type="button"
+                    onClick={() => {
+                      pendingFocusIndexRef.current = visibleCount;
+                      setVisibleCount((count) => count + PAGE_SIZE);
+                    }}
+                    className="btn btn--secondary event-more"
+                  >
+                    Показать ещё
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        )}
+      </div>
     </section>
   );
 }

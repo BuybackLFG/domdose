@@ -3,6 +3,7 @@ import type { GeoJsonObject } from 'geojson';
 import coastline from './map/coastline.json';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { scoreBand, type ScoreBand } from './format';
 import { PILOT_HOUSES } from './pilotHouses';
 import { PILOT_MAP } from './map/pilotMap';
 import type { HouseId, HouseSummary } from './types';
@@ -37,9 +38,9 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-function markerIcon(selected: boolean): L.DivIcon {
+function markerIcon(selected: boolean, band: ScoreBand): L.DivIcon {
   return L.divIcon({
-    className: `house-marker${selected ? ' house-marker-selected' : ''}`,
+    className: `house-marker house-marker--${band}${selected ? ' house-marker-selected' : ''}`,
     html: '<span></span>',
     iconSize: selected ? [24, 24] : [18, 18],
     iconAnchor: selected ? [12, 12] : [9, 9],
@@ -181,7 +182,7 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
     const observer = new ResizeObserver(() => {
       map.invalidateSize({ animate: false });
       if (!applyOverviewMinZoom(map)) return;
-      if (!fittedRef.current && fitToHouses(map, placedRef.current)) {
+      if (fitToHouses(map, placedRef.current)) {
         fittedRef.current = true;
         const selected = placedRef.current.find((house) => house.house_id === selectedIdRef.current);
         revealHouse(map, selected, false);
@@ -220,10 +221,11 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
 
     for (const house of placedHouses) {
       const selected = house.house_id === selectedHouseId;
+      const band = scoreBand(house.overall_score);
       let marker = markersRef.current.get(house.house_id);
       if (!marker) {
         marker = L.marker([house.lat, house.lon], {
-          icon: markerIcon(selected),
+          icon: markerIcon(selected, band),
           keyboard: true,
           title: house.address,
           alt: `${house.address}${selected ? ' (выбран)' : ''}`,
@@ -233,7 +235,7 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
         markersRef.current.set(house.house_id, marker);
       } else {
         marker.setLatLng([house.lat, house.lon]);
-        marker.setIcon(markerIcon(selected));
+        marker.setIcon(markerIcon(selected, band));
         marker.setZIndexOffset(selected ? 1000 : 0);
       }
 
@@ -247,29 +249,40 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
       });
     }
 
-    if (!fittedRef.current) fittedRef.current = fitToHouses(map, placedHouses);
-    if (fittedRef.current) {
+    if (!fittedRef.current) {
+      let tries = 0;
+      const attempt = () => {
+        if (mapRef.current !== map) return;
+        const size = map.getSize();
+        if (size.x > 2 * MARKER_FIT_PADDING && size.y > 2 * MARKER_FIT_PADDING
+          && fitToHouses(map, placedHouses)) {
+          fittedRef.current = true;
+          const selected = placedHouses.find((house) => house.house_id === selectedHouseId);
+          revealHouse(map, selected, !prefersReducedMotion());
+          return;
+        }
+        if (tries++ < 20) requestAnimationFrame(attempt);
+      };
+      attempt();
+    } else {
       const selected = placedHouses.find((house) => house.house_id === selectedHouseId);
       revealHouse(map, selected, !prefersReducedMotion());
     }
   }, [placedHouses, selectedHouseId]);
-
-  // isolate — свой контекст наложения: панели Leaflet (z-index 400–1000) не перекрывают
-  // выпадающие подсказки поиска над картой.
   return (
-    <section aria-labelledby="house-map-heading" className="isolate overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
-      <h2 id="house-map-heading" className="sr-only">Карта домов</h2>
-      <div ref={containerRef} className="h-80 w-full sm:h-105 lg:h-120" aria-label="Карта домов" />
+    <>
+      <div ref={containerRef} className="map-canvas" role="region" aria-label="Карта домов" />
       {assetError && (
-        <div role="alert" className="border-t border-danger/30 bg-danger/10 px-4 py-3 text-sm text-text">
-          Не удалось загрузить локальную подложку. Список и досье доступны; online fallback не выполняется.
+        <div role="alert" className="map-status">
+          Не удалось загрузить локальную подложку. Список и досье доступны; online fallback не
+          выполняется.
         </div>
       )}
       {unplacedCount > 0 && (
-        <p role="status" className="border-t border-border px-4 py-3 text-sm font-medium text-warning">
+        <p role="status" className="map-status">
           {`Не удалось показать на карте: ${unplacedCount}`}
         </p>
       )}
-    </section>
+    </>
   );
 }

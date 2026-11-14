@@ -11,16 +11,17 @@ export function WeakestCategory({ detail }: WeakestCategoryProps) {
   if (detail.weakest === null || weakest === null || weakest.score === 1) return null;
 
   return (
-    <section aria-labelledby="weakest-heading" className="rounded-2xl border border-warning/30 bg-warning/10 p-4 sm:p-5">
-      <h3 id="weakest-heading" className="text-base font-semibold text-text">
-        Худшая категория
-      </h3>
-      <p className="mt-2 text-xl font-semibold text-warning">
-        {categoryLabel(detail.weakest)}
-        <span className="ml-2 text-sm font-medium text-text-secondary">
-          {formatScore(weakest.score)} / 100
-        </span>
-      </p>
+    <section aria-labelledby="weakest-heading" className="weakest">
+      <div>
+        <h4 id="weakest-heading" className="weakest__label">
+          Худшая категория
+        </h4>
+        <p className="weakest__value">
+          {categoryLabel(detail.weakest)}
+          <b className="weakest__score">{formatScore(weakest.score)}</b>
+          <span className="sr-only">/ 100</span>
+        </p>
+      </div>
     </section>
   );
 }

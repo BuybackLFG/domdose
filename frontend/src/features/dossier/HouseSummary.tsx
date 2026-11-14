@@ -1,4 +1,4 @@
-import { formatPeriod, formatScore } from './format';
+import { formatPeriod, formatScore, scoreBand } from './format';
 import type { Loadable } from './useHouseDossier';
 import type { HouseDetailResponse, HouseSummary as HouseSummaryDto } from './types';
 
@@ -10,65 +10,89 @@ interface HouseSummaryProps {
   onRetryDetail: () => void;
 }
 
-export function HouseSummary({ house, district, detail, errorMessage, onRetryDetail }: HouseSummaryProps) {
+const BAND_LABELS = {
+  good: 'Надёжный диапазон выборки',
+  mid: 'Средний диапазон выборки',
+  bad: 'Слабое место выборки',
+  none: 'Недостаточно записей',
+} as const;
+
+export function HouseSummary({
+  house,
+  district,
+  detail,
+  errorMessage,
+  onRetryDetail,
+}: HouseSummaryProps) {
+  const score = detail.status === 'success' ? detail.data.overall_score : house.overall_score;
+  const band = scoreBand(score);
+  const period = detail.status === 'success' ? formatPeriod(detail.data.window) : null;
+  const eventCount = detail.status === 'success' ? detail.data.event_count ?? detail.data.events.length : house.event_count;
+
   return (
-    <section aria-labelledby="house-summary-heading" className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-border sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">Сводка дома</p>
-          <h2 id="house-summary-heading" className="mt-1 text-lg font-semibold leading-7 text-text">
-            {house.address}
-          </h2>
-          <p className="mt-1 text-sm text-text-secondary">
-            {district ?? 'Район не определён'}
-          </p>
-        </div>
+    <section aria-labelledby="house-summary-heading" className="summary-panel">
+      <p className="summary-panel__kicker">Сводка дома</p>
+      <div>
+        <h2 id="house-summary-heading" className="summary-panel__addr">
+          {house.address}
+        </h2>
+        <p className="summary-panel__district">{district ?? 'Район не определён'}</p>
       </div>
 
-      <div className="mt-4" aria-live="polite">
-        {detail.status === 'loading' && (
-          <div role="status" className="rounded-xl bg-surface-subtle p-4">
-            <p className="loading-pulse text-sm font-medium text-text-secondary">Загружаем досье…</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-4" aria-hidden="true">
-              {Array.from({ length: 4 }, (_, index) => (
-                <div key={index} className="h-20 rounded-xl bg-border/60" />
-              ))}
+      <div aria-live="polite">
+        {detail.status === 'idle' || detail.status === 'loading' ? (
+          <div className="state-block" role="status">
+            <p className="loading-pulse">Загружаем досье…</p>
+            <div aria-hidden="true" style={{ display: 'grid', gap: 8, width: '100%' }}>
+              <div className="skeleton" style={{ height: 28, width: '70%' }} />
+              <div className="skeleton" style={{ height: 14, width: '45%' }} />
             </div>
           </div>
-        )}
-
-        {detail.status === 'success' && (
-          <div className="rounded-xl bg-accent-soft p-4">
-            {detail.data.overall_score === null ? (
-              <p className="text-sm font-medium text-text">Нет записей за период — данных для оценки недостаточно.</p>
-            ) : (
-              <>
-                <p className="text-sm text-text-secondary">Индекс по найденным записям</p>
-                <p className="mt-1 text-3xl font-semibold text-accent">
-                  {formatScore(detail.data.overall_score)}
-                  <span className="ml-1 text-base font-medium text-text-secondary">/ 100</span>
-                </p>
-              </>
-            )}
-            <p className="mt-2 text-sm text-text-secondary">{formatPeriod(detail.data.window)}</p>
-            <p className="mt-2 text-sm text-text-secondary">Полнота журнала неизвестна. Категории без записей входят в расчёт индекса и среднего по выбранным домам с нулевыми наблюдаемыми показателями; это не подтверждает отсутствие отключений или надёжность дома.</p>
-          </div>
-        )}
-
-        {detail.status === 'error' && (
-          <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4">
-            <p className="text-sm font-medium text-text">{errorMessage}</p>
-            <p className="mt-1 text-sm text-text-secondary">
-              Правдоподобный ноль не показывается: без исходных данных рейтинг отсутствует.
-            </p>
-            <button
-              type="button"
-              onClick={onRetryDetail}
-              className="mt-3 min-h-11 rounded-xl bg-accent px-4 text-sm font-medium text-white transition hover:bg-accent-hover"
-            >
+        ) : detail.status === 'error' ? (
+          <div className="state-block state-block--error" role="alert">
+            <h3>{errorMessage}</h3>
+            <p>Правдоподобный ноль не показывается: без исходных данных рейтинг отсутствует.</p>
+            <button type="button" className="btn btn--secondary" onClick={onRetryDetail}>
               Повторить загрузку досье
             </button>
           </div>
+        ) : (
+          <>
+            {detail.data.overall_score === null ? (
+              <p className="score-note">
+                <b>Нет данных для оценки</b>
+                <span>Нет записей за период — данных для оценки недостаточно.</span>
+              </p>
+            ) : (
+              <div className="score-block">
+                <div
+                  className="score-ring"
+                  data-band={band}
+                  style={{ '--pct': (detail.data.overall_score * 100).toFixed(1) } as React.CSSProperties}
+                  aria-hidden="true"
+                >
+                  <p className="score-ring__text text-3xl">
+                    <span className="score-ring__value">{formatScore(detail.data.overall_score)}</span>
+                    <small className="sr-only">/ 100</small>
+                  </p>
+                </div>
+                <div className="score-note">
+                  <b>{BAND_LABELS[band]}</b>
+                </div>
+              </div>
+            )}
+
+            <dl className="summary-rows" style={{ marginTop: 'var(--s-5)' }}>
+              <div>
+                <dt>Записей в источнике</dt>
+                <dd>{eventCount ?? detail.data.events.length}</dd>
+              </div>
+              <div>
+                <dt>Период</dt>
+                <dd>{period}</dd>
+              </div>
+            </dl>
+          </>
         )}
       </div>
     </section>

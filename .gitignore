@@ -44,3 +44,6 @@ map-preparation/*.json
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Локальное состояние инструмента taste-skill
+.taste-skill/
