@@ -33,11 +33,33 @@ def scripts_repo(tmp_path: Path) -> tuple[Path, dict[str, str]]:
         path = bin_dir / name
         path.write_text(contents)
         path.chmod(0o755)
-    env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "UV_BIN": str(bin_dir / "uv")}
+    env = {
+        **os.environ,
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+        "UV_BIN": str(bin_dir / "uv"),
+    }
     return tmp_path, env
 
 
 def run_script(repo: Path, env: dict[str, str], script: str) -> subprocess.CompletedProcess[str]:
+    if os.name == "nt":
+        # Windows cannot execute shell scripts directly; convert paths inside Git Bash.
+        return subprocess.run(
+            [
+                "bash",
+                "-c",
+                'bin=$(cygpath -u "$1"); export PATH="$bin:$PATH" UV_BIN="$bin/uv"; '
+                'exec bash "$(cygpath -u "$2")"',
+                "test-script",
+                str(repo / "bin"),
+                str(repo / "scripts" / script),
+            ],
+            cwd=repo,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
     return subprocess.run(
         [str(repo / "scripts" / script)], cwd=repo, env=env, capture_output=True, text=True
     )

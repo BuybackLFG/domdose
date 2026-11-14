@@ -1,0 +1,192 @@
+[
+  {
+    "address": "Шилкинская, 11",
+    "type": "hot_water",
+    "date": "2026-08-10",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/vtoroy-etap-gidravlicheskikh-ispytaniy-prodlyen-dlya-nekotorykh-potrebiteley-vo-vladivostoke-adresa/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения на Шилкинской, 11",
+    "summary": "ДГК указала для дома период ограничения горячей воды из-за ремонта теплосетей с 10 августа 2026 года, 14:15, до 13 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Светланская, 155",
+    "type": "hot_water",
+    "date": "2026-08-06",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/vtoroy-etap-gidravlicheskikh-ispytaniy-prodlyen-dlya-nekotorykh-potrebiteley-vo-vladivostoke-adresa/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения на Светланской, 155",
+    "summary": "ДГК указала для дома период ограничения горячей воды из-за ремонта теплосетей с 6 августа 2026 года, 00:00, до 14 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Шилкинская, 11",
+    "type": "hot_water",
+    "date": "2026-09-29",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/primorskie-teplovye-seti-prodolzhayut-podgotovku-teplotrass-k-zime-adresa/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения на Шилкинской, 11",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 29 сентября 2026 года, 00:00, до 2 октября, 20:00 по местному времени."
+  },
+  {
+    "address": "Светланская, 143",
+    "type": "hot_water",
+    "date": "2026-08-06",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/vtoroy-etap-gidravlicheskikh-ispytaniy-prodlyen-dlya-nekotorykh-potrebiteley-vo-vladivostoke-adresa/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Светланская, 143",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 6 августа 2026 года, 00:00, до 14 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Светланская, 173",
+    "type": "hot_water",
+    "date": "2026-08-06",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/vtoroy-etap-gidravlicheskikh-ispytaniy-prodlyen-dlya-nekotorykh-potrebiteley-vo-vladivostoke-adresa/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Светланская, 173",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 6 августа 2026 года, 00:00, до 14 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Басаргина, 6Б корп. 1",
+    "type": "hot_water",
+    "date": "2026-08-06",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/novosti-strany/teploseti-vladivostoka-gotovyat-k-zime-adresa-55346/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Басаргина, 6Б корп. 1",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 6 августа 2026 года, 00:00, до 31 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Басаргина, 6Б корп. 2",
+    "type": "hot_water",
+    "date": "2026-08-06",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/novosti-strany/teploseti-vladivostoka-gotovyat-k-zime-adresa-55346/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Басаргина, 6Б корп. 2",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 6 августа 2026 года, 00:00, до 31 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Можайская, 20",
+    "type": "hot_water",
+    "date": "2026-08-06",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/novosti-strany/teploseti-vladivostoka-gotovyat-k-zime-adresa-55346/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Можайская, 20",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 6 августа 2026 года, 00:00, до 31 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Можайская, 22",
+    "type": "hot_water",
+    "date": "2026-08-06",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/novosti-strany/teploseti-vladivostoka-gotovyat-k-zime-adresa-55346/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Можайская, 22",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 6 августа 2026 года, 00:00, до 31 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Можайская, 24",
+    "type": "hot_water",
+    "date": "2026-08-06",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/novosti-strany/teploseti-vladivostoka-gotovyat-k-zime-adresa-55346/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Можайская, 24",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 6 августа 2026 года, 00:00, до 31 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Сочинская, 17",
+    "type": "hot_water",
+    "date": "2026-08-06",
+    "severity": 1,
+    "source_url": "https://dvgk.ru/press/news/novosti-strany/teploseti-vladivostoka-gotovyat-k-zime-adresa-55346/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Сочинская, 17",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 6 августа 2026 года, 00:00, до 31 августа, 20:00 по местному времени."
+  },
+  {
+    "address": "Басаргина, 6Б корп. 1",
+    "type": "hot_water",
+    "date": "2026-09-05",
+    "severity": 1,
+    "source_url": "https://www.dvgk.ru/press/news/teploseti-vladivostoka-prokhodyat-podgotovku-k-zime-55779/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Басаргина, 6Б корп. 1",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 5 сентября 2026 года, 10:38, до 18 сентября, 17:00 по местному времени."
+  },
+  {
+    "address": "Басаргина, 6Б корп. 2",
+    "type": "hot_water",
+    "date": "2026-09-05",
+    "severity": 1,
+    "source_url": "https://www.dvgk.ru/press/news/teploseti-vladivostoka-prokhodyat-podgotovku-k-zime-55779/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Басаргина, 6Б корп. 2",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 5 сентября 2026 года, 10:38, до 18 сентября, 17:00 по местному времени."
+  },
+  {
+    "address": "Можайская, 20",
+    "type": "hot_water",
+    "date": "2026-09-05",
+    "severity": 1,
+    "source_url": "https://www.dvgk.ru/press/news/teploseti-vladivostoka-prokhodyat-podgotovku-k-zime-55779/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Можайская, 20",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 5 сентября 2026 года, 10:38, до 18 сентября, 17:00 по местному времени."
+  },
+  {
+    "address": "Сочинская, 17",
+    "type": "hot_water",
+    "date": "2026-09-05",
+    "severity": 1,
+    "source_url": "https://www.dvgk.ru/press/news/teploseti-vladivostoka-prokhodyat-podgotovku-k-zime-55779/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Сочинская, 17",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 5 сентября 2026 года, 10:38, до 18 сентября, 17:00 по местному времени."
+  },
+  {
+    "address": "Можайская, 22",
+    "type": "hot_water",
+    "date": "2026-09-05",
+    "severity": 1,
+    "source_url": "https://www.dvgk.ru/press/news/teploseti-vladivostoka-prokhodyat-podgotovku-k-zime-55779/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Можайская, 22",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 5 сентября 2026 года, 10:38, до 18 сентября, 17:00 по местному времени."
+  },
+  {
+    "address": "Можайская, 24",
+    "type": "hot_water",
+    "date": "2026-09-05",
+    "severity": 1,
+    "source_url": "https://www.dvgk.ru/press/news/teploseti-vladivostoka-prokhodyat-podgotovku-k-zime-55779/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения — Можайская, 24",
+    "summary": "На время ремонта теплосетей ДГК указала ограничение горячей воды с 5 сентября 2026 года, 10:38, до 18 сентября, 17:00 по местному времени."
+  },
+  {
+    "address": "Крыгина, 42А",
+    "type": "hot_water",
+    "date": "2026-05-26",
+    "severity": 1,
+    "source_url": "https://www.dvgk.ru/press/news/novosti-strany/raboty-na-teplovykh-setyakh-provodyat-vo-vladivostoke-energetiki-adresa-51957/",
+    "retrieved_at": "2026-11-13",
+    "title": "Ограничение горячего водоснабжения на Крыгина, 42А",
+    "summary": "ДГК сообщила об ограничении с 26 мая, 00:00, до 2 июня, 00:00, и о непрерывном продолжении ограничения до 26 августа по опубликованному на тот момент плану работ."
+  },
+  {
+    "address": "Русская, 65А",
+    "type": "hot_water",
+    "date": "2026-09-07",
+    "severity": 1,
+    "source_url": "https://www.dvgk.ru/press/news/tretiy-etap-letne-osennikh-gidravlicheskikh-ispytaniy-nachalsya-vo-vladivostoke-adresa-/",
+    "retrieved_at": "2026-11-13",
+    "title": "Уведомление об ограничении ГВС на Русской, 65А",
+    "summary": "ДГК включила дом в перечень адресов третьего этапа гидравлических испытаний с 7 по 14 сентября. Часы ограничения в адресном перечне не указаны."
+  }
+]
