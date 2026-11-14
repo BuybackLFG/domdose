@@ -133,8 +133,23 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
     // Prefix Leaflet по умолчанию содержит внешнюю ссылку; attribution — только текст manifest.
     map.attributionControl.setPrefix(false);
 
-    L.rectangle(OVERVIEW_BOUNDS, { stroke: false, fillColor: '#aad3df', fillOpacity: 1, interactive: false }).addTo(map);
-    L.geoJSON(coastline as GeoJsonObject, { style: { stroke: false, fillColor: '#f2efe9', fillOpacity: 1 }, interactive: false }).addTo(map);
+    // Подложка закрывает только свои bounds; вне них нужен фон. Держим фон в
+    // отдельной панели ниже overlay-pane: Leaflet поднимает SVG-векторы над
+    // image overlay, и в общей панели береговая линия перекрывала карту.
+    const maskPane = map.createPane('house-map-mask');
+    maskPane.style.zIndex = '350';
+    L.rectangle(OVERVIEW_BOUNDS, {
+      pane: 'house-map-mask',
+      stroke: false,
+      fillColor: '#aad3df',
+      fillOpacity: 1,
+      interactive: false,
+    }).addTo(map);
+    L.geoJSON(coastline as GeoJsonObject, {
+      pane: 'house-map-mask',
+      style: { stroke: false, fillColor: '#f2efe9', fillOpacity: 1 },
+      interactive: false,
+    }).addTo(map);
 
     // Один детальный оверлей на тех же bounds: при смене уровня меняется только src.
     let currentImageUrl = imageUrlForZoom(map.getZoom());
