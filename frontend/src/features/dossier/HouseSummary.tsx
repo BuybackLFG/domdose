@@ -78,7 +78,6 @@ export function HouseSummary({
                 </div>
                 <div className="score-note">
                   <b>{BAND_LABELS[band]}</b>
-                  <p>Индекс по найденным записям, не подтверждённый рейтинг надёжности.</p>
                 </div>
               </div>
             )}

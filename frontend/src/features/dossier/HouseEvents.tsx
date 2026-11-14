@@ -121,10 +121,6 @@ export function HouseEvents({ events, status }: HouseEventsProps) {
                     ? 'По этому фильтру записей нет.'
                     : `Показано ${Math.min(visible.length, filtered.length)} из ${filtered.length}.`}
                 </p>
-                <p className="t-small muted">
-                  Событие попадает в период, если началось до конца окна и закончилось после его
-                  начала.
-                </p>
               </div>
 
               <div className="events-main">

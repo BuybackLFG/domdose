@@ -257,10 +257,6 @@ export function DossierPage() {
               <a className="btn btn--primary" href="#top">Найти дом</a>
               <a className="btn btn--secondary" href="#houses">Все дома</a>
             </div>
-            <p className="footer__lede">
-              Данные приближённые: полнота журнала неизвестна, рейтинг не заменяет проверку дома и
-              не описывает весь Владивосток.
-            </p>
           </div>
 
           <div className="closing__links">

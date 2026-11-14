@@ -30,7 +30,7 @@ export function HeroPreview({ listStatus, selectedHouse, district, detail }: Her
     <div className="dossier-window" aria-label="Предпросмотр досье">
       <div className="dossier-window__bar" aria-hidden="true">
         <span className="dossier-window__dots"><span /><span /><span /></span>
-        <span className="dossier-window__title">ДомДосье · досье дома</span>
+        <span className="dossier-window__title">ДомДосье</span>
       </div>
 
       <div className="dossier-window__body">
@@ -107,10 +107,6 @@ export function HeroPreview({ listStatus, selectedHouse, district, detail }: Her
             </div>
 
             <a className="link dossier-window__more" href="#events">Все события</a>
-
-            <p className="dossier-window__note">
-              Полнота журнала неизвестна: отключения могли не попасть в источник.
-            </p>
 
             <div className="dossier-window__foot">
               <span>{period}</span>
