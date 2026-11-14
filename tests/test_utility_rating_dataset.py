@@ -1,4 +1,5 @@
 import json
+import math
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -135,12 +136,13 @@ def test_happy_path_maps_dto_and_preserves_independent_scoring_example():
     target = result.ratings["house_000001"]
     electricity = target.categories[UtilityCategory.ELECTRICITY]
     assert_metrics(electricity, (1.4, 9.0, 5.0))
-    # Средние 20 домов: (0.07, 0.45, 0.25); все ratio = 20, штрафы = 1.
+    # Средние 20 домов: (0.07, 0.45, 0.25); приор равен единице.
     penalties = electricity.penalties
-    assert (penalties.frequency, penalties.hours, penalties.longest) == (1.0,) * 3
-    assert electricity.score == 0.0
-    # weighted = 0.7, cap = 0 + 0.25.
-    assert target.overall_score == 0.25
+    assert (penalties.frequency, penalties.hours, penalties.longest) == pytest.approx(
+        (math.log2(2.4 / 1.07) / 3, math.log2(10 / 1.45) / 3, math.log2(6 / 1.25) / 3)
+    )
+    assert electricity.score == pytest.approx(0.3222911990971438)
+    assert target.overall_score == pytest.approx(0.5722911990971438)
 
     for house_id, empty in result.ratings.items():
         if house_id == "house_000001":

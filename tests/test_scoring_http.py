@@ -254,17 +254,21 @@ def test_score_city_independent_twenty_house_golden(internal_client):
     ratings = payload["ratings"]
     assert set(ratings) == {f"house_{index:06d}" for index in range(1, 21)}
     target = ratings[TARGET]
-    assert target["overall_score"] == 0.25
+    assert target["overall_score"] == pytest.approx(0.5722911990971438)
     assert tuple(target["categories"]) == CATEGORIES
     electricity = target["categories"]["electricity"]
-    # Для 20 домов средние равны (0.07, 0.45, 0.25), все ratio равны 20.
+    # Для 20 домов средние равны (0.07, 0.45, 0.25); приор равен 1.
     assert electricity["metrics"] == {
         "frequency": 1.4,
         "hours": 9.0,
         "longest": 5.0,
     }
-    assert electricity["penalties"] == {name: 1.0 for name in METRICS}
-    assert electricity["score"] == 0.0
+    assert electricity["penalties"] == pytest.approx({
+        "frequency": math.log2(2.4 / 1.07) / 3,
+        "hours": math.log2(10 / 1.45) / 3,
+        "longest": math.log2(6 / 1.25) / 3,
+    })
+    assert electricity["score"] == pytest.approx(0.3222911990971438)
     for category, detail in target["categories"].items():
         assert set(detail["metrics"]) == set(METRICS)
         assert set(detail["penalties"]) == set(METRICS)
@@ -397,7 +401,7 @@ def test_public_detail_adds_events_and_weakest_without_replacing_old_fields(
         "events",
         "weakest",
     } <= set(payload)
-    assert payload["overall_score"] == 0.25
+    assert payload["overall_score"] == pytest.approx(0.5722911990971438)
     assert payload["weakest"] == "electricity"
     assert [event["source_url"] for event in payload["events"]] == [
         "https://example.test/synthetic/planned-10h",
@@ -480,11 +484,9 @@ def test_public_events_global_order_and_weakest_tie_break(
         ),
     ]
     assert actual_order == expected_order
-    assert all(
-        category["score"] == 0.0
-        for category in payload["categories"].values()
-    )
-    assert payload["weakest"] == "hot_water"
+    assert payload["categories"]["hot_water"]["score"] == payload["categories"]["heating"]["score"]
+    assert payload["categories"]["electricity"]["score"] < payload["categories"]["hot_water"]["score"]
+    assert payload["weakest"] == "electricity"
 
 
 def test_scoring_client_disables_environment_redirects_and_sets_all_timeouts():

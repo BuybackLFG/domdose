@@ -25,6 +25,8 @@ from utility_rating.metrics import (
 _WINDOW_LENGTH = timedelta(days=30)
 _TZ_OFFSET = timedelta(hours=10)
 _METRIC_WEIGHTS = MetricValues(0.4, 0.4, 0.2)
+# Один взвешенный инцидент или час на шкале соответствующей метрики.
+_METRIC_PRIORS = MetricValues(1.0, 1.0, 1.0)
 _CATEGORY_WEIGHTS: Mapping[UtilityCategory, float] = {
     UtilityCategory.ELECTRICITY: 0.30,
     UtilityCategory.COLD_WATER: 0.25,
@@ -179,10 +181,11 @@ def _score_category(metrics: MetricValues, average: MetricValues) -> CategoryRat
     """Оценить категорию: штрафы за превышение среднего и итог."""
     penalties = MetricValues(
         *(
-            _penalty(metric, avg)
-            for metric, avg in zip(
+            _penalty(metric, avg, prior)
+            for metric, avg, prior in zip(
                 (metrics.frequency, metrics.hours, metrics.longest),
                 (average.frequency, average.hours, average.longest),
+                (_METRIC_PRIORS.frequency, _METRIC_PRIORS.hours, _METRIC_PRIORS.longest),
                 strict=True,
             )
         )
@@ -198,15 +201,11 @@ def _score_category(metrics: MetricValues, average: MetricValues) -> CategoryRat
     return CategoryRating(metrics=metrics, penalties=penalties, score=score)
 
 
-def _penalty(metric: float, average: float) -> float:
-    """Логарифмический штраф min(1, log2(ratio)/3) при превышении среднего."""
-    if average == 0.0:
-        if metric > 0.0:
-            raise ValueError("positive metric contradicts zero city average")
-        return 0.0
+def _penalty(metric: float, average: float, prior: float) -> float:
+    """Сгладить сравнение с выборкой опорной единицей метрики."""
     if metric <= average:
         return 0.0
-    return min(1.0, math.log2(metric / average) / 3.0)
+    return min(1.0, math.log2((metric + prior) / (average + prior)) / 3.0)
 
 
 def _overall_score(

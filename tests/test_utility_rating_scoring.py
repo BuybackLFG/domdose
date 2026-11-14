@@ -99,29 +99,14 @@ def load_two_house_dataset() -> UtilityDataset:
     )
 
 
-@pytest.mark.parametrize(
-    ("house_count", "expected_penalty"),
-    [
-        pytest.param(2, 1 / 3, id="two-times-average"),
-        pytest.param(4, 2 / 3, id="four-times-average"),
-        pytest.param(8, 1.0, id="eight-times-average"),
-        pytest.param(16, 1.0, id="above-eight-times-saturates"),
-    ],
-)
-def test_penalty_log_scale_and_saturation(
-    house_count: int, expected_penalty: float
-) -> None:
-    result = score_city(
-        make_dataset(events=(make_event(),), houses=make_houses(house_count))
-    )
+@pytest.mark.parametrize("house_count", [2, 4, 8, 16])
+def test_sparse_reference_changes_smoothly_with_sample_size(house_count: int) -> None:
+    result = score_city(make_dataset(events=(make_event(),), houses=make_houses(house_count)))
     category = result.ratings["house-0"].categories[UtilityCategory.ELECTRICITY]
-
-    # Пустые дома входят в знаменатель: каждая метрика целевого дома в N раз выше среднего.
-    assert_values(
-        category.penalties,
-        MetricValues(expected_penalty, expected_penalty, expected_penalty),
-    )
-    assert math.isclose(category.score, 1.0 - expected_penalty, abs_tol=1e-12)
+    frequency_penalty = math.log2(2 / (1 + 1 / house_count)) / 3
+    duration_penalty = math.log2(3 / (1 + 2 / house_count)) / 3
+    assert_values(category.penalties, MetricValues(frequency_penalty, duration_penalty, duration_penalty))
+    assert category.score == pytest.approx(1 - 0.4 * frequency_penalty - 0.6 * duration_penalty)
 
 
 def test_no_penalty_at_or_below_city_average() -> None:
@@ -158,8 +143,8 @@ def test_zero_average_of_duration_metrics_does_not_hide_frequency_penalty() -> N
     category = result.ratings["house-0"].categories[UtilityCategory.ELECTRICITY]
 
     assert_values(category.metrics, MetricValues(1.0, 0.0, 0.0))
-    assert_values(category.penalties, MetricValues(1 / 3, 0.0, 0.0))
-    assert math.isclose(category.score, 1 - 0.4 / 3, abs_tol=1e-12)
+    assert_values(category.penalties, MetricValues(math.log2(2 / 1.5) / 3, 0.0, 0.0))
+    assert math.isclose(category.score, 1 - 0.4 * math.log2(2 / 1.5) / 3, abs_tol=1e-12)
 
 
 def test_longest_metric_has_independent_twenty_percent_weight() -> None:
@@ -177,8 +162,8 @@ def test_longest_metric_has_independent_twenty_percent_weight() -> None:
     )
     category = result.ratings["house-0"].categories[UtilityCategory.ELECTRICITY]
 
-    # ratio longest = 4 / ((4 + 1) / 2) = 8/5; остальные штрафы нулевые.
-    longest_penalty = math.log2(8 / 5) / 3
+    # Сглаженное отношение longest = (4 + 1) / (2.5 + 1).
+    longest_penalty = math.log2(5 / 3.5) / 3
     assert_values(
         category.penalties, MetricValues(0.0, 0.0, longest_penalty)
     )
@@ -210,7 +195,7 @@ def test_hours_metric_has_independent_forty_percent_weight() -> None:
     category = result.ratings["house-0"].categories[UtilityCategory.ELECTRICITY]
 
     # Целевой дом: (f, h, l) = (1.6, 6.4, 1.6), другой: (2, 4, 4).
-    hours_penalty = math.log2(16 / 13) / 3
+    hours_penalty = math.log2(7.4 / 6.2) / 3
     assert_values(category.penalties, MetricValues(0.0, hours_penalty, 0.0))
     assert math.isclose(category.score, 1 - 0.4 * hours_penalty, abs_tol=1e-12)
 
@@ -234,15 +219,19 @@ def test_category_weights_are_applied_before_cap(
     )
     house = result.ratings["house-0"]
 
-    # Категория равна 2/3, остальные равны 1; cap равен 11/12.
-    assert math.isclose(house.categories[category].score, 2 / 3, abs_tol=1e-12)
-    expected = min(1 - weight / 3, 11 / 12)
+    category_score = 1 - 0.4 * math.log2(2 / 1.5) / 3 - 0.6 * math.log2(3 / 2) / 3
+    assert house.categories[category].score == pytest.approx(category_score)
+    expected = min(1 - weight * (1 - category_score), category_score + 0.25)
     assert math.isclose(house.overall_score, expected, abs_tol=1e-12)
 
 
 def test_zero_electricity_score_caps_overall_at_quarter() -> None:
     result = score_city(
-        make_dataset(houses=make_houses(8), events=(make_event(),))
+        make_dataset(houses=make_houses(20), events=tuple(
+            make_event(started_at=WINDOW_START + timedelta(days=i),
+                       ended_at=WINDOW_START + timedelta(days=i, hours=20))
+            for i in range(20)
+        ))
     )
     house = result.ratings["house-0"]
 
@@ -261,20 +250,14 @@ def test_independent_two_house_example_from_fixture() -> None:
     electricity = target.categories[UtilityCategory.ELECTRICITY]
     assert_values(electricity.metrics, MetricValues(1.4, 9.0, 5.0))
 
-    # Средние по двум домам: (0.7, 4.5, 2.5); все ratio = 2, штрафы = 1/3.
-    city_average = (0.7, 4.5, 2.5)
-    house_metrics = (1.4, 9.0, 5.0)
-    for house_value, average in zip(house_metrics, city_average, strict=True):
-        assert math.isclose(house_value / average, 2.0, abs_tol=1e-12)
-        assert math.isclose(math.log2(house_value / average) / 3, 1 / 3)
-    assert_values(electricity.penalties, MetricValues(1 / 3, 1 / 3, 1 / 3))
-    assert math.isclose(electricity.score, 2 / 3, abs_tol=1e-12)
-
+    # Независимый пример: средние (0.7, 4.5, 2.5), приор 1 на каждой шкале.
+    penalties = (math.log2(2.4 / 1.7) / 3, math.log2(10 / 5.5) / 3, math.log2(6 / 3.5) / 3)
+    assert_values(electricity.penalties, MetricValues(*penalties))
+    expected_category = 1 - 0.4 * penalties[0] - 0.4 * penalties[1] - 0.2 * penalties[2]
+    assert electricity.score == pytest.approx(expected_category)
     for category in ALL_CATEGORIES - {UtilityCategory.ELECTRICITY}:
         assert target.categories[category].score == 1.0
-    # weighted = 0.30*(2/3) + 0.25 + 0.25 + 0.20 = 0.9; cap = 11/12.
-    assert 0.9 < 11 / 12
-    assert math.isclose(target.overall_score, 0.9, abs_tol=1e-12)
+    assert target.overall_score == pytest.approx(min(0.7 + 0.3 * expected_category, expected_category + 0.25))
 
     empty = result.ratings["house-empty"]
     assert all(empty.categories[category].score == 1.0 for category in ALL_CATEGORIES)
@@ -369,3 +352,17 @@ def test_rejects_negative_and_non_finite_temporal_inputs(invalid_value: float) -
     # Числовой timestamp не является timezone-aware datetime и должен отклоняться.
     with pytest.raises((ValueError, TypeError)):
         score_city(make_dataset(events=(make_event(started_at=invalid_value),)))
+
+@pytest.mark.parametrize(("duration", "expected_category", "expected_overall"), [(1, 0.6901297759637994, 0.9070389327891398), (2, 0.5865601149912756, 0.8365601149912756), (8, 0.3391522755311057, 0.5891522755311057)])
+def test_sparse_single_outage_has_absolute_scale(duration, expected_category, expected_overall):
+    result = score_city(make_dataset(houses=make_houses(20), events=(make_event(ended_at=WINDOW_START + timedelta(hours=duration)),)))
+    house = result.ratings['house-0']
+    assert house.categories[UtilityCategory.ELECTRICITY].score == pytest.approx(expected_category)
+    assert house.overall_score == pytest.approx(expected_overall)
+
+
+def test_sparse_repeated_outages_remain_penalized():
+    events = tuple(make_event(started_at=WINDOW_START + timedelta(days=i), ended_at=WINDOW_START + timedelta(days=i, hours=1)) for i in range(8))
+    house = score_city(make_dataset(houses=make_houses(20), events=events)).ratings['house-0']
+    assert house.categories[UtilityCategory.ELECTRICITY].score == pytest.approx(0.22215977538687434)
+    assert house.overall_score == pytest.approx(0.47215977538687437)
