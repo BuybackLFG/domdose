@@ -208,3 +208,12 @@ test('новые типы событий получают понятные по�
   assert.equal(eventTypeLabel('heat'), 'отопление')
   assert.equal(eventTypeLabel('wind'), 'ветер')
 })
+
+test('агрегатор и неполные измерения событий не маскируются как официальные', () => {
+  assert.equal(kindView('aggregator').label, 'агрегатор')
+  assert.match(kindView('aggregator').note ?? '', /не проверен/)
+  const [item] = buildTimeline([{ ...makeEvent({ id: 'agg', date: '2026-11-01' }), kind: 'aggregator', severity: null, match: 'range', outage_kind: 'unknown', duration_hours: null, duration_basis: 'unknown' }])
+  assert.equal(item?.severity.label, 'не указана')
+  assert.equal(item?.match, 'range')
+  assert.equal(item?.durationHours, null)
+})

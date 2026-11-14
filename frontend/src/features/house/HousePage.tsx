@@ -15,6 +15,7 @@ import { Disclaimer } from '../dossier/Disclaimer'
 import { DossierHeader } from '../dossier/DossierHeader'
 import { FactsSection } from '../dossier/FactsSection'
 import { IndexPanel } from '../dossier/IndexPanel'
+import { RatingPanel } from '../dossier/RatingPanel'
 import { SourcesSection } from '../dossier/SourcesSection'
 import { EventsSection } from '../events/EventsSection'
 import { ChecklistSection } from '../checklist/ChecklistSection'
@@ -78,7 +79,7 @@ export function HousePage({ houseId }: { houseId: string }) {
           {/* Дисклеймер обязателен по контракту и показывается дословно:
               это текст из API, а не наш. Вёрстку уточняет F2 (DD-23). */}
           <Disclaimer text={dossier.disclaimer} />
-          <IndexPanel index={dossier.index ?? null} />
+          {dossier.rating ? <RatingPanel rating={dossier.rating} /> : <IndexPanel index={dossier.index ?? null} />}
           <FactsSection facts={dossier.facts ?? []} />
           <EventsSection events={dossier.events ?? []} />
           <ChecklistSection houseId={dossier.house.id} items={dossier.checklist ?? []} />
