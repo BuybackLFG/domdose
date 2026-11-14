@@ -723,3 +723,6 @@ main > :is(section, .section)[data-screen="free"] > :is(.wrap, .container) { hei
   html { scroll-behavior: auto; }
   .loading-pulse, .skeleton { animation: none; }
 }
+
+/* Пункты меню по центру шапки — на одной линии с логотипом и кнопкой. */
+.nav__links { align-items: center; }
