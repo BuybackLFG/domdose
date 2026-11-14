@@ -8,7 +8,7 @@
 */
 :root {
   --p-bg: #eef0f3; --p-surface: #e2e5ea; --p-ink: #0b0c0e; --p-muted: #5d6470;
-  --p-accent: #ea580c; --p-accent-ink: #ffffff; --p-action: #ea580c; --p-action-ink: #ffffff;
+  --p-accent: #c2410c; --p-accent-ink: #ffffff; --p-action: #c2410c; --p-action-ink: #ffffff;
   --accent: var(--p-accent);
   --p-inv-bg: #0b0c0e; --p-inv-surface: #17181a; --p-inv-ink: #eef0f3; --p-inv-muted: #8e8f92;
   --p-inv-accent: #eef0f3; --p-inv-accent-ink: #0b0c0e; --p-inv-action: #eef0f3; --p-inv-action-ink: #0b0c0e;
