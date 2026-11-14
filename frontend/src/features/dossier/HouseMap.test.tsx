@@ -130,6 +130,29 @@ describe('offline-карта основного экрана', () => {
     expect(map.querySelectorAll('.leaflet-tile, .leaflet-tile-container')).toHaveLength(0);
     expect(externalReferences(document)).toEqual([]);
   });
+
+  it('держит подложку вне панели маски, иначе SVG берега перекрывает карту', async () => {
+    installFetch();
+    const { container } = render(<DossierPage />);
+    await waitFor(() => {
+      expect(container.querySelectorAll('.leaflet-container .house-marker')).toHaveLength(20);
+    });
+
+    const overlay = container.querySelector('img.leaflet-image-layer');
+    const maskPane = container.querySelector<HTMLElement>('.leaflet-house-map-mask-pane');
+    expect(overlay, 'нужен imageOverlay подложки').toBeTruthy();
+    expect(maskPane, 'нужна отдельная панель фона под подложкой').toBeTruthy();
+    expect(maskPane!.querySelector('svg'), 'берег и морской фон должны быть в панели маски').toBeTruthy();
+
+    const overlayPane = overlay!.closest('.leaflet-pane');
+    expect(overlayPane?.classList.contains('leaflet-overlay-pane')).toBe(true);
+    expect(overlayPane).not.toBe(maskPane);
+    expect(
+      overlayPane!.querySelector('svg'),
+      'SVG в overlay-pane получает z-index 200 и закрывает imageOverlay с z-index 1',
+    ).toBeNull();
+    expect(Number(maskPane!.style.zIndex)).toBe(350);
+  });
 });
 
 interface ManifestZoom {
