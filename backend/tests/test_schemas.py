@@ -201,6 +201,17 @@ def test_event_needs_house_or_district() -> None:
         )
 
 
+def test_event_type_enum_is_single_source_of_truth() -> None:
+    """Импортер обязан брать типы из контракта, а не держать свою копию.
+
+    Копия enum уже расходилась: импортер не знал про cold_water/heat/wind,
+    и валидный по контракту снимок отвергался. Тест ловит возврат к дублю.
+    """
+    from app.ingest.official import EVENT_TYPES
+
+    assert frozenset(member.value for member in EventType) == EVENT_TYPES
+
+
 def test_event_accepts_district_only() -> None:
     event = Event.model_validate(
         {

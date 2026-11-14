@@ -6,8 +6,11 @@
  * честно пишем «не посчитан», а не рисуем ноль: ноль — это оценка, а не
  * отсутствие оценки.
  */
+// Карточки оценок и выделение минимума адаптированы из FarpostMVP
+// module/frontend (d6e938452ce5d23d22a63bd46ea0183ba141cff7),
+// frontend/src/features/dossier/CategoryScores.tsx и WeakestCategory.tsx.
 import { formatCoverage, formatDate, formatWeight } from '../../lib/format'
-import { summarizeComponents } from './componentsSummary'
+import { summarizeComponents, weakestComponents } from './componentsSummary'
 import type { HouseIndex } from '../../types'
 
 function ComponentRow({
@@ -24,7 +27,7 @@ function ComponentRow({
   explanation: string
 }) {
   return (
-    <li className="space-y-1.5">
+    <li className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <span className="text-sm font-medium text-slate-200">{label}</span>
         <span className="text-xs text-slate-400">
@@ -60,6 +63,7 @@ export function IndexPanel({ index }: { index: HouseIndex | null }) {
   }
 
   const { rows, totalWeight } = summarizeComponents(index.components)
+  const weakest = weakestComponents(rows)
 
   return (
     <section
@@ -75,7 +79,21 @@ export function IndexPanel({ index }: { index: HouseIndex | null }) {
         <p className="text-sm text-slate-400">из 100 по открытым данным</p>
       </div>
 
-      <ul className="space-y-3">
+      {weakest.length > 0 && (
+        <aside aria-labelledby="weakest-components-title" className="rounded-xl border border-amber-800/50 bg-amber-950/20 p-4">
+          <h3 id="weakest-components-title" className="text-sm font-semibold text-amber-200">
+            {weakest.length === 1 ? 'Самая низкая оценка' : 'Самые низкие оценки'}
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-200">
+            {weakest.map((row) => `${row.label} — ${row.score} из 100`).join('; ')}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            Среди компонентов индекса по доступным данным.
+          </p>
+        </aside>
+      )}
+
+      <ul className="grid gap-3 sm:grid-cols-2">
         {rows.map((row) => (
           <ComponentRow
             key={row.key}

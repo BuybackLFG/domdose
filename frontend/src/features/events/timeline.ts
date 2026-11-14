@@ -13,17 +13,20 @@ import type { Event, EventKind, EventType } from '../../types'
 /* ── Тип события ─────────────────────────────────────────────────────────── */
 
 /**
- * Русские подписи всех 11 значений `EventType`. `Record` вместо `Map`
+ * Русские подписи значений `EventType`. `Record` вместо `Map`
  * намеренно: если контракт добавит тип, TypeScript потребует дополнить
  * таблицу, и мы не забудем подпись.
  */
 const EVENT_TYPE_LABELS: Record<EventType, string> = {
   hot_water: 'горячая вода',
+  cold_water: 'холодная вода',
+  heat: 'отопление',
   accident: 'авария',
   power: 'электричество',
   flood: 'подтопление',
   landslide: 'оползень',
   typhoon: 'тайфун',
+  wind: 'ветер',
   ice: 'гололёд',
   elevator: 'лифт',
   caprepair: 'капремонт',

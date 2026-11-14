@@ -201,3 +201,10 @@ test('sourceHost отдаёт читаемый домен и переживае�
   assert.equal(sourceHost(null), '')
   assert.equal(sourceHost('не url'), '')
 })
+
+
+test('новые типы событий получают понятные подписи', () => {
+  assert.equal(eventTypeLabel('cold_water'), 'холодная вода')
+  assert.equal(eventTypeLabel('heat'), 'отопление')
+  assert.equal(eventTypeLabel('wind'), 'ветер')
+})
