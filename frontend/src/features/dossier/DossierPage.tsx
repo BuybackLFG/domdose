@@ -198,10 +198,6 @@ export function DossierPage() {
           <div className="wrap">
             <div className="section-head">
               <h2 id="dossier-heading">Досье выбранного дома</h2>
-              <p>
-                Сводка, четыре оценки и ограничение общего индекса. Числа считаются по найденным
-                записям за 30 дней; отсутствие данных не превращается в ноль.
-              </p>
             </div>
 
             {list.status === 'loading' && (

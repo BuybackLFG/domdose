@@ -559,7 +559,7 @@ main > .hero.hero--split {
   border-radius: var(--r-md);
   background: color-mix(in oklab, var(--accent) 7%, var(--bg));
 }
-.weakest__label { font-size: var(--t-small); font-weight: 600; color: var(--accent); }
+.weakest__label { font-size: var(--t-small); font-weight: 600; color: var(--ink); }
 .weakest__value {
   display: flex; align-items: baseline; gap: 10px; margin: 2px 0 0;
   font-size: var(--t-lead); font-weight: 500;
