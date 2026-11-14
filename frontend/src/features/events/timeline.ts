@@ -86,6 +86,8 @@ export interface KindView {
 
 export function kindView(kind: string | null | undefined): KindView {
   switch (kind) {
+    case 'aggregator':
+      return { label: 'агрегатор', note: 'первичный источник не проверен', tone: 'unknown' }
     case 'official':
       return { label: 'официальный источник', note: null, tone: 'official' }
     case 'ai':
@@ -189,6 +191,10 @@ export interface TimelineItem {
   kind: KindView
   /** Уверенность числом, если она низкая и неофициальная. */
   confidencePercent: number | null
+  match: Event['match']
+  outageKind: Event['outage_kind']
+  durationHours: Event['duration_hours']
+  durationBasis: Event['duration_basis']
   sourceUrl: string
   /** Короткий хост для подписи ссылки; пустая строка, если URL битый. */
   sourceHost: string
@@ -220,6 +226,10 @@ export function buildTimeline(events: readonly Event[] | null | undefined): Time
     severity: severityView(event.severity),
     kind: kindView(event.kind),
     confidencePercent: confidencePercent(event.kind, event.confidence),
+    match: event.match,
+    outageKind: event.outage_kind,
+    durationHours: event.duration_hours,
+    durationBasis: event.duration_basis,
     sourceUrl: event.source_url,
     sourceHost: sourceHost(event.source_url),
   }))

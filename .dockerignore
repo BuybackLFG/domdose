@@ -1,0 +1,23 @@
+# Только файлы backend и его локальной runtime-библиотеки.
+*
+!pyproject.toml
+!core
+!contract
+!rating
+!data
+data/*
+!data/datasets
+data/datasets/*
+!data/datasets/communal-outages-2026.json
+!backend
+backend/*
+!backend/Dockerfile
+!backend/pyproject.toml
+!backend/uv.lock
+!backend/README.md
+!backend/app
+!backend/schemas
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.env

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, pred_main]
   pull_request:
   workflow_dispatch:
 
@@ -66,7 +66,7 @@ jobs:
         run: ./scripts/check_api_types.sh
 
   production-smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       COMPOSE_PROJECT_NAME: domdose-ci-${{ github.run_id }}-${{ github.run_attempt }}
@@ -79,16 +79,50 @@ jobs:
         run: |
           curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://localhost/ -o /tmp/domdose-index.html
           grep -qi '<!doctype html>' /tmp/domdose-index.html
-          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://localhost/api/health | python3 -c 'import json, sys; assert json.load(sys.stdin) == {"status": "ok"}'
-          # /api/health живёт вне префикса и проходит даже при срезанном префиксе.
-          # Поэтому отдельно проверяем реальный эндпоинт под /api: 501 значит, что
-          # запрос дошёл до роутера, 404 — что nginx сломал путь.
-          status=$(curl -s -o /tmp/domdose-houses.json -w '%{http_code}' --retry 10 --retry-connrefused --retry-delay 1 http://localhost/api/houses)
-          echo "GET /api/houses -> $status"
-          if [ "$status" != "200" ] && [ "$status" != "501" ]; then
-            echo "путь /api/* не дошёл до backend (status $status)" >&2
-            exit 1
-          fi
+          curl -fsS http://localhost/ready
+          curl -fsS http://localhost/api/ready
+          curl -fsS 'http://localhost/api/houses?q=' -o /tmp/domdose-houses.json
+          python3 -c 'import json; dataset=json.load(open("data/datasets/communal-outages-2026.json")); d=json.load(open("/tmp/domdose-houses.json")); ids={x["id"] for x in d["items"]}; assert d["total"] > 0 and ids; house_id=next(link["house_id"] for e in dataset["events"] for link in e["houses"] if link["house_id"] in ids); open("/tmp/domdose-house-id", "w").write(house_id)'
+          house_id=$(python3 -c 'from urllib.parse import quote; print(quote(open("/tmp/domdose-house-id").read(), safe=""))')
+          curl -fsS "http://localhost/api/houses/$house_id" -o /tmp/domdose-dossier.json
+          python3 -c 'import json; d=json.load(open("/tmp/domdose-dossier.json")); assert d["house"]["id"] == open("/tmp/domdose-house-id").read() and d["rating"] is not None and d["events"]'
+      - name: Проверить реальные запросы браузера
+        run: |
+          mkdir -p /tmp/domdose-browser
+          cd /tmp/domdose-browser
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+          node <<'JS'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({headless: true});
+            const page = await browser.newPage();
+            page.setDefaultTimeout(60000);
+            const response = page.waitForResponse(r => new URL(r.url()).pathname === '/api/houses');
+            await page.goto('http://localhost/');
+            const result = await response;
+            const list = await result.json();
+            if (result.status() !== 200 || !list.items.length) throw new Error('Browser list request failed');
+            const id = require('fs').readFileSync('/tmp/domdose-house-id', 'utf8');
+            if (!list.items.some(item => item.id === id)) throw new Error('House missing from browser list');
+            const dossierResponse = page.waitForResponse(r => new URL(r.url()).pathname === `/api/houses/${encodeURIComponent(id)}`);
+            await page.goto(`http://localhost/house/${encodeURIComponent(id)}`);
+            const dossier = await dossierResponse;
+            if (dossier.status() !== 200 || (await dossier.json()).house.id !== id) throw new Error('Browser dossier request failed');
+            await page.getByRole('heading', {name: 'События', exact: true}).waitFor();
+            await browser.close();
+          })().catch(error => { console.error(error); process.exit(1); });
+          JS
+      - name: Проверить отказ готовности при отсутствии данных
+        run: |
+          DATASET_PATH=/missing/absent.json docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate backend
+          for i in $(seq 1 30); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost/api/ready || true)
+            [ "$status" = 503 ] && break
+            sleep 1
+          done
+          test "$status" = 503
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost/ready)" = 503
       - name: Логи при ошибке
         if: failure()
         run: docker compose -f docker-compose.prod.yml logs --no-color

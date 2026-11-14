@@ -1,6 +1,7 @@
 """Досье дома — ответ `GET /api/houses/{id}` (задача B2)."""
 
 from pydantic import BaseModel, Field
+from rating import CalculationReport
 
 from schemas.checklist import ChecklistItem
 from schemas.events import Event
@@ -21,6 +22,7 @@ class Dossier(BaseModel):
         default=None,
         description="null, если индекс ещё не посчитан: досье без индекса валидно",
     )
+    rating: CalculationReport | None = None
     facts: list[Fact] = Field(default_factory=list)
     events: list[Event] = Field(default_factory=list)
     checklist: list[ChecklistItem] = Field(default_factory=list)

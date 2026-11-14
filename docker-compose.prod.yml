@@ -8,13 +8,15 @@ name: domdose
 services:
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     image: domdose-backend:latest
     restart: unless-stopped
     environment:
       APP_ENV: ${APP_ENV:-production}
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/domdose.db}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://domdose.ru}
+      DATASET_PATH: ${DATASET_PATH:-/app/data/datasets/communal-outages-2026.json}
     volumes:
       - db-data:/data
     expose:
@@ -24,11 +26,11 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').status==200 else 1)"
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/ready').status==200 else 1)"
       interval: 30s
-      timeout: 3s
+      timeout: 30s
       retries: 3
-      start_period: 10s
+      start_period: 30s
     networks:
       - web
 
@@ -36,7 +38,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: /api
+        VITE_API_URL: ""
     image: domdose-frontend:latest
     restart: unless-stopped
     depends_on:

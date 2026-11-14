@@ -81,7 +81,8 @@ export function SearchPage() {
   const listId = useId()
   const optionId = (index: number): string => `${listId}-option-${index}`
 
-  const count = search.items.length
+  const visibleItems = search.status === 'ready' && !search.isPending ? search.items : []
+  const count = visibleItems.length
 
   // Пришёл новый список — прежний активный индекс относится к другому списку.
   useEffect(() => {
@@ -120,7 +121,7 @@ export function SearchPage() {
         // Enter без выбора открывает первый вариант: так работает любой
         // автокомплит, и демо не должно упираться в «сначала нажми стрелку».
         const index = enterIndex(count, activeIndex, search.query)
-        const target = index >= 0 ? search.items[index] : undefined
+        const target = index >= 0 ? visibleItems[index] : undefined
         if (target) {
           event.preventDefault()
           open(target)
@@ -211,7 +212,7 @@ export function SearchPage() {
           aria-busy={search.isPending}
           className="divide-y divide-slate-800/70 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50"
         >
-          {search.items.map((house, index) => (
+          {visibleItems.map((house, index) => (
             <ResultRow
               key={house.id}
               house={house}
