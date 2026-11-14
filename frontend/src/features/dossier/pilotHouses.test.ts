@@ -110,6 +110,20 @@ describe('пилотный геокаталог', () => {
     });
   });
 
+  it('совпадает с пилотным набором dataset/output/utility-rating.json', () => {
+    const datasetPath = resolve(process.cwd(), '..', 'dataset', 'output', 'utility-rating.json');
+    expect(existsSync(datasetPath), 'Нужен отслеживаемый пилотный набор dataset/output/utility-rating.json').toBe(true);
+    const dataset = JSON.parse(readFileSync(datasetPath, 'utf8')) as {
+      houses: Array<{ house_id: string; address: string }>;
+    };
+    expect(
+      dataset.houses.map((house) => ({ house_id: house.house_id, address: house.address })),
+      'Порядок, id и адреса геокаталога должны совпадать с набором, который отдаёт API.',
+    ).toEqual(
+      PILOT_HOUSES.map((house) => ({ house_id: house.house_id, address: house.address })),
+    );
+  });
+
   it('имеет конечные координаты всех 20 домов внутри prepared bounds', () => {
     const invalid = PILOT_HOUSES.filter((house) => (
       typeof house.lat !== 'number'

@@ -10,83 +10,83 @@
  "houses": [
   {
    "house_id": "house_000001",
-   "address": "Владивосток, улица 1-я Пригородная, дом 1"
+   "address": "Владивосток, переулок Шевченко, дом 4"
   },
   {
    "house_id": "house_000002",
-   "address": "Владивосток, улица Верхнепортовая, дом 41б"
+   "address": "Владивосток, проспект 100-летия Владивостока, дом 129"
   },
   {
    "house_id": "house_000003",
-   "address": "Владивосток, улица Всеволода Сибирцева, дом 20А"
+   "address": "Владивосток, проспект 100-летия Владивостока, дом 153"
   },
   {
    "house_id": "house_000004",
-   "address": "Владивосток, улица Всеволода Сибирцева, дом 46"
+   "address": "Владивосток, проспект 100-летия Владивостока, дом 54"
   },
   {
    "house_id": "house_000005",
-   "address": "Владивосток, улица Гамарника, дом 18Б"
+   "address": "Владивосток, проспект Красного Знамени, дом 38"
   },
   {
    "house_id": "house_000006",
-   "address": "Владивосток, улица Иртышская, дом 40"
+   "address": "Владивосток, проспект Острякова, дом 44"
   },
   {
    "house_id": "house_000007",
-   "address": "Владивосток, улица Калинина, дом 6"
+   "address": "Владивосток, улица 40 лет ВЛКСМ, дом 2/8"
   },
   {
    "house_id": "house_000008",
-   "address": "Владивосток, улица Калинина, дом 85"
+   "address": "Владивосток, улица Адмирала Кузнецова, дом 68"
   },
   {
    "house_id": "house_000009",
-   "address": "Владивосток, улица Карбышева, дом 14"
+   "address": "Владивосток, улица Адмирала Фокина, дом 7А"
   },
   {
    "house_id": "house_000010",
-   "address": "Владивосток, улица Окатовая, дом 10"
+   "address": "Владивосток, улица Борисенко, дом 66"
   },
   {
    "house_id": "house_000011",
-   "address": "Владивосток, улица Полетаева, дом 26"
+   "address": "Владивосток, улица Вострецова, дом 36Б"
   },
   {
    "house_id": "house_000012",
-   "address": "Владивосток, улица Посьетская, дом 9"
+   "address": "Владивосток, улица Героев Варяга, дом 2/2"
   },
   {
    "house_id": "house_000013",
-   "address": "Владивосток, улица Сабанеева, дом 14в"
+   "address": "Владивосток, улица Громова, дом 12"
   },
   {
    "house_id": "house_000014",
-   "address": "Владивосток, улица Садгородская, дом 29"
+   "address": "Владивосток, улица Ковальчука, дом 26"
   },
   {
    "house_id": "house_000015",
-   "address": "Владивосток, улица Сафонова, дом 12"
+   "address": "Владивосток, улица Лиманная, дом 176"
   },
   {
    "house_id": "house_000016",
-   "address": "Владивосток, улица Станюковича, дом 3"
+   "address": "Владивосток, улица Маньчжурская, дом 15"
   },
   {
    "house_id": "house_000017",
-   "address": "Владивосток, улица Тигровая, дом 23а"
+   "address": "Владивосток, улица Патрокл, дом 11"
   },
   {
    "house_id": "house_000018",
-   "address": "Владивосток, улица Тобольская, дом 29"
+   "address": "Владивосток, улица Русская, дом 51"
   },
   {
    "house_id": "house_000019",
-   "address": "Владивосток, улица Третья, дом 7а"
+   "address": "Владивосток, улица Терешковой, дом 9"
   },
   {
    "house_id": "house_000020",
-   "address": "Владивосток, улица Шилкинская, дом 10"
+   "address": "Владивосток, улица Тухачевского, дом 46"
   }
  ],
  "coverage": {
@@ -97,47 +97,97 @@
  },
  "events": [
   {
-   "house_id": "house_000009",
+   "house_id": "house_000001",
+   "category": "cold_water",
+   "started_at": "2026-10-22T09:00:00+10:00",
+   "ended_at": "2026-10-22T22:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168637.html"
+  },
+  {
+   "house_id": "house_000001",
    "category": "electricity",
-   "started_at": "2026-10-16T15:22:00+10:00",
-   "ended_at": "2026-10-16T18:00:00+10:00",
+   "started_at": "2026-10-21T10:03:00+10:00",
+   "ended_at": "2026-10-21T16:00:00+10:00",
    "kind": "emergency",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168458.html"
+   "source_url": "https://www.vl.ru/off/blackout/168628.html"
   },
   {
-   "house_id": "house_000009",
+   "house_id": "house_000002",
+   "category": "hot_water",
+   "started_at": "2026-10-21T12:00:00+10:00",
+   "ended_at": "2026-10-26T12:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168659.html"
+  },
+  {
+   "house_id": "house_000002",
+   "category": "hot_water",
+   "started_at": "2026-10-26T14:56:00+10:00",
+   "ended_at": "2026-10-28T12:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168891.html"
+  },
+  {
+   "house_id": "house_000002",
+   "category": "cold_water",
+   "started_at": "2026-10-29T09:00:00+10:00",
+   "ended_at": "2026-10-29T17:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169020.html"
+  },
+  {
+   "house_id": "house_000002",
    "category": "heating",
-   "started_at": "2026-10-22T11:56:00+10:00",
-   "ended_at": "2026-10-26T14:00:00+10:00",
+   "started_at": "2026-10-21T12:00:00+10:00",
+   "ended_at": "2026-10-26T12:00:00+10:00",
    "kind": "emergency",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168670.html"
+   "source_url": "https://www.vl.ru/off/blackout/168660.html"
   },
   {
-   "house_id": "house_000009",
+   "house_id": "house_000002",
    "category": "heating",
    "started_at": "2026-10-26T14:56:00+10:00",
    "ended_at": "2026-10-28T12:00:00+10:00",
-   "kind": "emergency",
+   "kind": "planned",
    "is_mass": true,
    "is_natural_disaster": false,
    "source_url": "https://www.vl.ru/off/blackout/168892.html"
   },
   {
-   "house_id": "house_000010",
-   "category": "hot_water",
-   "started_at": "2026-10-13T12:30:00+10:00",
-   "ended_at": "2026-10-14T20:00:00+10:00",
-   "kind": "emergency",
+   "house_id": "house_000002",
+   "category": "heating",
+   "started_at": "2026-10-29T11:51:00+10:00",
+   "ended_at": "2026-10-29T17:00:00+10:00",
+   "kind": "planned",
    "is_mass": true,
-   "is_natural_disaster": true,
-   "source_url": "https://www.vl.ru/off/blackout/168322.html"
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169120.html"
   },
   {
-   "house_id": "house_000010",
+   "house_id": "house_000003",
+   "category": "hot_water",
+   "started_at": "2026-11-06T14:06:00+10:00",
+   "ended_at": "2026-11-06T15:30:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169477.html"
+  },
+  {
+   "house_id": "house_000003",
    "category": "hot_water",
    "started_at": "2026-11-06T14:06:00+10:00",
    "ended_at": "2026-11-06T18:00:00+10:00",
@@ -147,87 +197,37 @@
    "source_url": "https://www.vl.ru/off/blackout/169475.html"
   },
   {
-   "house_id": "house_000010",
-   "category": "hot_water",
-   "started_at": "2026-11-06T14:06:00+10:00",
-   "ended_at": "2026-11-09T12:00:00+10:00",
+   "house_id": "house_000003",
+   "category": "electricity",
+   "started_at": "2026-11-11T15:16:00+10:00",
+   "ended_at": "2026-11-11T17:00:00+10:00",
    "kind": "emergency",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169484.html"
+   "source_url": "https://www.vl.ru/off/blackout/169689.html"
   },
   {
-   "house_id": "house_000010",
-   "category": "hot_water",
-   "started_at": "2026-11-06T20:03:00+10:00",
-   "ended_at": "2026-11-07T00:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169501.html"
-  },
-  {
-   "house_id": "house_000010",
-   "category": "hot_water",
-   "started_at": "2026-11-09T15:06:00+10:00",
-   "ended_at": "2026-11-09T19:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169570.html"
-  },
-  {
-   "house_id": "house_000010",
-   "category": "hot_water",
-   "started_at": "2026-11-10T06:31:00+10:00",
-   "ended_at": "2026-11-10T12:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169599.html"
-  },
-  {
-   "house_id": "house_000010",
-   "category": "hot_water",
-   "started_at": "2026-11-10T12:05:00+10:00",
-   "ended_at": "2026-11-11T00:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169630.html"
-  },
-  {
-   "house_id": "house_000010",
-   "category": "hot_water",
-   "started_at": "2026-11-11T00:29:00+10:00",
-   "ended_at": "2026-11-11T12:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169669.html"
-  },
-  {
-   "house_id": "house_000010",
-   "category": "hot_water",
-   "started_at": "2026-11-11T12:04:00+10:00",
-   "ended_at": "2026-11-13T12:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169687.html"
-  },
-  {
-   "house_id": "house_000010",
+   "house_id": "house_000003",
    "category": "heating",
-   "started_at": "2026-10-13T12:30:00+10:00",
-   "ended_at": "2026-10-14T20:00:00+10:00",
-   "kind": "emergency",
+   "started_at": "2026-10-28T12:28:00+10:00",
+   "ended_at": "2026-10-30T14:00:00+10:00",
+   "kind": "planned",
    "is_mass": true,
-   "is_natural_disaster": true,
-   "source_url": "https://www.vl.ru/off/blackout/168321.html"
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169042.html"
   },
   {
-   "house_id": "house_000010",
+   "house_id": "house_000003",
+   "category": "heating",
+   "started_at": "2026-11-06T14:06:00+10:00",
+   "ended_at": "2026-11-06T15:30:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169478.html"
+  },
+  {
+   "house_id": "house_000003",
    "category": "heating",
    "started_at": "2026-11-06T14:06:00+10:00",
    "ended_at": "2026-11-06T18:00:00+10:00",
@@ -237,131 +237,351 @@
    "source_url": "https://www.vl.ru/off/blackout/169476.html"
   },
   {
-   "house_id": "house_000010",
+   "house_id": "house_000004",
    "category": "heating",
-   "started_at": "2026-11-06T14:06:00+10:00",
-   "ended_at": "2026-11-09T12:00:00+10:00",
-   "kind": "emergency",
+   "started_at": "2026-10-26T14:56:00+10:00",
+   "ended_at": "2026-10-28T12:00:00+10:00",
+   "kind": "planned",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169485.html"
+   "source_url": "https://www.vl.ru/off/blackout/168892.html"
   },
   {
-   "house_id": "house_000010",
+   "house_id": "house_000004",
    "category": "heating",
-   "started_at": "2026-11-06T20:03:00+10:00",
-   "ended_at": "2026-11-07T00:00:00+10:00",
-   "kind": "emergency",
+   "started_at": "2026-10-28T12:28:00+10:00",
+   "ended_at": "2026-10-30T14:00:00+10:00",
+   "kind": "planned",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169502.html"
+   "source_url": "https://www.vl.ru/off/blackout/169042.html"
   },
   {
-   "house_id": "house_000010",
+   "house_id": "house_000004",
    "category": "heating",
-   "started_at": "2026-11-07T16:54:00+10:00",
-   "ended_at": "2026-11-07T21:00:00+10:00",
-   "kind": "emergency",
+   "started_at": "2026-10-31T09:14:00+10:00",
+   "ended_at": "2026-11-02T08:00:00+10:00",
+   "kind": "planned",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169521.html"
+   "source_url": "https://www.vl.ru/off/blackout/169213.html"
   },
   {
-   "house_id": "house_000010",
-   "category": "heating",
-   "started_at": "2026-11-09T15:06:00+10:00",
-   "ended_at": "2026-11-09T19:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169571.html"
-  },
-  {
-   "house_id": "house_000010",
-   "category": "heating",
-   "started_at": "2026-11-10T00:04:00+10:00",
-   "ended_at": "2026-11-10T12:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169598.html"
-  },
-  {
-   "house_id": "house_000010",
-   "category": "heating",
-   "started_at": "2026-11-10T12:05:00+10:00",
-   "ended_at": "2026-11-11T00:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169631.html"
-  },
-  {
-   "house_id": "house_000010",
-   "category": "heating",
-   "started_at": "2026-11-11T00:29:00+10:00",
-   "ended_at": "2026-11-11T12:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169670.html"
-  },
-  {
-   "house_id": "house_000010",
-   "category": "heating",
-   "started_at": "2026-11-11T12:04:00+10:00",
-   "ended_at": "2026-11-13T12:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169688.html"
-  },
-  {
-   "house_id": "house_000012",
-   "category": "hot_water",
-   "started_at": "2026-09-11T12:00:00+10:00",
-   "ended_at": "2026-10-14T20:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/167487.html"
-  },
-  {
-   "house_id": "house_000012",
-   "category": "hot_water",
-   "started_at": "2026-10-11T10:25:00+10:00",
-   "ended_at": "2026-10-21T17:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168407.html"
-  },
-  {
-   "house_id": "house_000012",
+   "house_id": "house_000005",
    "category": "cold_water",
-   "started_at": "2026-10-18T23:08:00+10:00",
-   "ended_at": "2026-10-19T20:00:00+10:00",
+   "started_at": "2026-11-08T20:11:00+10:00",
+   "ended_at": "2026-11-09T06:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169539.html"
+  },
+  {
+   "house_id": "house_000005",
+   "category": "heating",
+   "started_at": "2026-11-06T10:12:00+10:00",
+   "ended_at": "2026-11-06T17:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169452.html"
+  },
+  {
+   "house_id": "house_000005",
+   "category": "heating",
+   "started_at": "2026-11-07T10:16:00+10:00",
+   "ended_at": "2026-11-07T17:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169510.html"
+  },
+  {
+   "house_id": "house_000006",
+   "category": "electricity",
+   "started_at": "2026-10-27T11:52:00+10:00",
+   "ended_at": "2026-10-27T16:00:00+10:00",
    "kind": "emergency",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168532.html"
+   "source_url": "https://www.vl.ru/off/blackout/168966.html"
+  },
+  {
+   "house_id": "house_000007",
+   "category": "hot_water",
+   "started_at": "2026-10-12T08:00:00+10:00",
+   "ended_at": "2026-10-15T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168111.html"
+  },
+  {
+   "house_id": "house_000007",
+   "category": "hot_water",
+   "started_at": "2026-10-12T12:04:00+10:00",
+   "ended_at": "2026-10-16T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168134.html"
+  },
+  {
+   "house_id": "house_000007",
+   "category": "hot_water",
+   "started_at": "2026-10-13T12:30:00+10:00",
+   "ended_at": "2026-10-14T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168322.html"
+  },
+  {
+   "house_id": "house_000007",
+   "category": "hot_water",
+   "started_at": "2026-10-16T20:01:00+10:00",
+   "ended_at": "2026-10-22T12:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168480.html"
+  },
+  {
+   "house_id": "house_000007",
+   "category": "hot_water",
+   "started_at": "2026-10-22T12:00:00+10:00",
+   "ended_at": "2026-10-23T12:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168677.html"
+  },
+  {
+   "house_id": "house_000007",
+   "category": "hot_water",
+   "started_at": "2026-10-29T18:01:00+10:00",
+   "ended_at": "2026-10-29T22:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169148.html"
+  },
+  {
+   "house_id": "house_000007",
+   "category": "hot_water",
+   "started_at": "2026-11-06T12:06:00+10:00",
+   "ended_at": "2026-11-07T11:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169464.html"
+  },
+  {
+   "house_id": "house_000007",
+   "category": "heating",
+   "started_at": "2026-10-13T12:30:00+10:00",
+   "ended_at": "2026-10-14T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168321.html"
+  },
+  {
+   "house_id": "house_000007",
+   "category": "heating",
+   "started_at": "2026-10-22T12:00:00+10:00",
+   "ended_at": "2026-10-23T12:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168678.html"
+  },
+  {
+   "house_id": "house_000007",
+   "category": "heating",
+   "started_at": "2026-11-06T12:06:00+10:00",
+   "ended_at": "2026-11-07T11:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169465.html"
+  },
+  {
+   "house_id": "house_000008",
+   "category": "cold_water",
+   "started_at": "2026-10-16T10:00:00+10:00",
+   "ended_at": "2026-10-16T20:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168429.html"
+  },
+  {
+   "house_id": "house_000008",
+   "category": "cold_water",
+   "started_at": "2026-10-22T09:00:00+10:00",
+   "ended_at": "2026-10-22T22:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168564.html"
+  },
+  {
+   "house_id": "house_000009",
+   "category": "cold_water",
+   "started_at": "2026-11-10T09:25:00+10:00",
+   "ended_at": "2026-11-10T19:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169607.html"
+  },
+  {
+   "house_id": "house_000009",
+   "category": "electricity",
+   "started_at": "2026-10-25T09:00:00+10:00",
+   "ended_at": "2026-10-25T11:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168844.html"
+  },
+  {
+   "house_id": "house_000010",
+   "category": "hot_water",
+   "started_at": "2026-10-12T08:00:00+10:00",
+   "ended_at": "2026-10-15T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168111.html"
+  },
+  {
+   "house_id": "house_000010",
+   "category": "hot_water",
+   "started_at": "2026-10-12T12:04:00+10:00",
+   "ended_at": "2026-10-16T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168134.html"
+  },
+  {
+   "house_id": "house_000010",
+   "category": "heating",
+   "started_at": "2026-10-22T17:03:00+10:00",
+   "ended_at": "2026-10-26T14:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168715.html"
+  },
+  {
+   "house_id": "house_000011",
+   "category": "cold_water",
+   "started_at": "2026-10-21T09:00:00+10:00",
+   "ended_at": "2026-10-21T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168534.html"
+  },
+  {
+   "house_id": "house_000011",
+   "category": "electricity",
+   "started_at": "2026-10-19T08:41:00+10:00",
+   "ended_at": "2026-10-19T12:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168541.html"
+  },
+  {
+   "house_id": "house_000012",
+   "category": "hot_water",
+   "started_at": "2026-10-22T12:07:00+10:00",
+   "ended_at": "2026-10-26T14:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168669.html"
+  },
+  {
+   "house_id": "house_000012",
+   "category": "heating",
+   "started_at": "2026-10-22T11:56:00+10:00",
+   "ended_at": "2026-10-26T14:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168670.html"
   },
   {
    "house_id": "house_000013",
    "category": "hot_water",
-   "started_at": "2026-10-13T18:53:00+10:00",
-   "ended_at": "2026-10-17T21:00:00+10:00",
+   "started_at": "2026-10-12T08:00:00+10:00",
+   "ended_at": "2026-10-15T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168111.html"
+  },
+  {
+   "house_id": "house_000013",
+   "category": "hot_water",
+   "started_at": "2026-10-12T12:04:00+10:00",
+   "ended_at": "2026-10-16T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168134.html"
+  },
+  {
+   "house_id": "house_000013",
+   "category": "hot_water",
+   "started_at": "2026-10-13T12:30:00+10:00",
+   "ended_at": "2026-10-14T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168322.html"
+  },
+  {
+   "house_id": "house_000013",
+   "category": "hot_water",
+   "started_at": "2026-10-16T20:01:00+10:00",
+   "ended_at": "2026-10-22T12:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168480.html"
+  },
+  {
+   "house_id": "house_000013",
+   "category": "hot_water",
+   "started_at": "2026-10-27T06:38:00+10:00",
+   "ended_at": "2026-10-27T07:50:00+10:00",
    "kind": "emergency",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168345.html"
+   "source_url": "https://www.vl.ru/off/blackout/168951.html"
+  },
+  {
+   "house_id": "house_000013",
+   "category": "hot_water",
+   "started_at": "2026-10-30T10:06:00+10:00",
+   "ended_at": "2026-10-30T14:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169174.html"
   },
   {
    "house_id": "house_000013",
    "category": "hot_water",
    "started_at": "2026-11-08T20:10:00+10:00",
    "ended_at": "2026-11-09T07:00:00+10:00",
-   "kind": "emergency",
+   "kind": "planned",
    "is_mass": true,
    "is_natural_disaster": false,
    "source_url": "https://www.vl.ru/off/blackout/169541.html"
@@ -374,160 +594,90 @@
    "kind": "emergency",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168428.html"
+   "source_url": "https://www.vl.ru/off/blackout/168427.html"
+  },
+  {
+   "house_id": "house_000013",
+   "category": "cold_water",
+   "started_at": "2026-10-27T06:43:00+10:00",
+   "ended_at": "2026-10-27T07:05:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168952.html"
   },
   {
    "house_id": "house_000013",
    "category": "cold_water",
    "started_at": "2026-11-08T19:55:00+10:00",
    "ended_at": "2026-11-09T08:00:00+10:00",
-   "kind": "emergency",
+   "kind": "planned",
    "is_mass": true,
    "is_natural_disaster": false,
    "source_url": "https://www.vl.ru/off/blackout/169540.html"
   },
   {
    "house_id": "house_000013",
+   "category": "electricity",
+   "started_at": "2026-10-27T06:36:00+10:00",
+   "ended_at": "2026-10-27T07:55:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168949.html"
+  },
+  {
+   "house_id": "house_000013",
+   "category": "electricity",
+   "started_at": "2026-10-30T00:17:00+10:00",
+   "ended_at": "2026-10-30T00:31:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169163.html"
+  },
+  {
+   "house_id": "house_000013",
+   "category": "electricity",
+   "started_at": "2026-10-30T10:02:00+10:00",
+   "ended_at": "2026-10-30T14:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169172.html"
+  },
+  {
+   "house_id": "house_000013",
    "category": "heating",
-   "started_at": "2026-10-13T18:53:00+10:00",
-   "ended_at": "2026-10-17T12:00:00+10:00",
+   "started_at": "2026-10-13T12:30:00+10:00",
+   "ended_at": "2026-10-14T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168321.html"
+  },
+  {
+   "house_id": "house_000013",
+   "category": "heating",
+   "started_at": "2026-10-27T06:45:00+10:00",
+   "ended_at": "2026-10-27T07:50:00+10:00",
    "kind": "emergency",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168353.html"
+   "source_url": "https://www.vl.ru/off/blackout/168950.html"
   },
   {
-   "house_id": "house_000014",
-   "category": "electricity",
-   "started_at": "2026-11-04T15:12:00+10:00",
-   "ended_at": "2026-11-04T17:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169354.html"
-  },
-  {
-   "house_id": "house_000014",
-   "category": "electricity",
-   "started_at": "2026-11-04T17:04:00+10:00",
-   "ended_at": "2026-11-04T21:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169356.html"
-  },
-  {
-   "house_id": "house_000015",
-   "category": "cold_water",
-   "started_at": "2026-11-08T20:11:00+10:00",
-   "ended_at": "2026-11-09T06:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169539.html"
-  },
-  {
-   "house_id": "house_000015",
-   "category": "electricity",
-   "started_at": "2026-11-06T20:31:00+10:00",
-   "ended_at": "2026-11-07T00:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169504.html"
-  },
-  {
-   "house_id": "house_000015",
-   "category": "electricity",
-   "started_at": "2026-11-10T19:26:00+10:00",
-   "ended_at": "2026-11-10T23:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169650.html"
-  },
-  {
-   "house_id": "house_000015",
+   "house_id": "house_000013",
    "category": "heating",
    "started_at": "2026-11-08T19:59:00+10:00",
    "ended_at": "2026-11-09T08:00:00+10:00",
-   "kind": "emergency",
+   "kind": "planned",
    "is_mass": true,
    "is_natural_disaster": false,
    "source_url": "https://www.vl.ru/off/blackout/169542.html"
   },
   {
-   "house_id": "house_000015",
-   "category": "heating",
-   "started_at": "2026-11-09T08:10:00+10:00",
-   "ended_at": "2026-11-09T12:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169545.html"
-  },
-  {
-   "house_id": "house_000015",
-   "category": "heating",
-   "started_at": "2026-11-12T15:31:00+10:00",
-   "ended_at": "2026-11-12T19:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169738.html"
-  },
-  {
-   "house_id": "house_000017",
-   "category": "electricity",
-   "started_at": "2026-10-26T22:32:00+10:00",
-   "ended_at": "2026-10-27T02:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168937.html"
-  },
-  {
-   "house_id": "house_000018",
-   "category": "hot_water",
-   "started_at": "2026-11-02T09:23:00+10:00",
-   "ended_at": "2026-11-02T17:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169253.html"
-  },
-  {
-   "house_id": "house_000018",
-   "category": "hot_water",
-   "started_at": "2026-11-11T09:09:00+10:00",
-   "ended_at": "2026-11-11T10:59:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169679.html"
-  },
-  {
-   "house_id": "house_000018",
-   "category": "hot_water",
-   "started_at": "2026-11-11T11:00:00+10:00",
-   "ended_at": "2026-11-11T15:59:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169681.html"
-  },
-  {
-   "house_id": "house_000018",
-   "category": "hot_water",
-   "started_at": "2026-11-11T16:00:00+10:00",
-   "ended_at": "2026-11-12T00:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169690.html"
-  },
-  {
-   "house_id": "house_000018",
+   "house_id": "house_000014",
    "category": "cold_water",
    "started_at": "2026-10-16T10:00:00+10:00",
    "ended_at": "2026-10-16T20:00:00+10:00",
@@ -537,7 +687,47 @@
    "source_url": "https://www.vl.ru/off/blackout/168429.html"
   },
   {
-   "house_id": "house_000018",
+   "house_id": "house_000014",
+   "category": "cold_water",
+   "started_at": "2026-10-22T09:00:00+10:00",
+   "ended_at": "2026-10-22T22:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168564.html"
+  },
+  {
+   "house_id": "house_000015",
+   "category": "electricity",
+   "started_at": "2026-11-03T09:00:00+10:00",
+   "ended_at": "2026-11-03T17:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169280.html"
+  },
+  {
+   "house_id": "house_000015",
+   "category": "electricity",
+   "started_at": "2026-11-05T09:00:00+10:00",
+   "ended_at": "2026-11-05T17:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169320.html"
+  },
+  {
+   "house_id": "house_000016",
+   "category": "cold_water",
+   "started_at": "2026-10-16T10:00:00+10:00",
+   "ended_at": "2026-10-16T20:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168429.html"
+  },
+  {
+   "house_id": "house_000016",
    "category": "cold_water",
    "started_at": "2026-10-22T09:00:00+10:00",
    "ended_at": "2026-10-22T22:00:00+10:00",
@@ -548,213 +738,143 @@
   },
   {
    "house_id": "house_000018",
-   "category": "heating",
-   "started_at": "2026-11-02T09:47:00+10:00",
-   "ended_at": "2026-11-02T17:00:00+10:00",
+   "category": "cold_water",
+   "started_at": "2026-10-29T09:00:00+10:00",
+   "ended_at": "2026-10-29T17:00:00+10:00",
    "kind": "emergency",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169254.html"
+   "source_url": "https://www.vl.ru/off/blackout/169020.html"
   },
   {
    "house_id": "house_000018",
-   "category": "heating",
-   "started_at": "2026-11-11T09:18:00+10:00",
-   "ended_at": "2026-11-11T10:59:00+10:00",
+   "category": "electricity",
+   "started_at": "2026-11-07T12:16:00+10:00",
+   "ended_at": "2026-11-07T12:19:00+10:00",
    "kind": "emergency",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169680.html"
-  },
-  {
-   "house_id": "house_000018",
-   "category": "heating",
-   "started_at": "2026-11-11T11:00:00+10:00",
-   "ended_at": "2026-11-11T15:59:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169682.html"
-  },
-  {
-   "house_id": "house_000018",
-   "category": "heating",
-   "started_at": "2026-11-11T16:00:00+10:00",
-   "ended_at": "2026-11-12T00:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169691.html"
-  },
-  {
-   "house_id": "house_000018",
-   "category": "heating",
-   "started_at": "2026-11-12T00:27:00+10:00",
-   "ended_at": "2026-11-12T12:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169706.html"
+   "source_url": "https://www.vl.ru/off/blackout/169512.html"
   },
   {
    "house_id": "house_000019",
-   "category": "electricity",
-   "started_at": "2026-11-03T00:16:00+10:00",
-   "ended_at": "2026-11-03T00:30:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169293.html"
-  },
-  {
-   "house_id": "house_000020",
    "category": "hot_water",
    "started_at": "2026-10-12T12:04:00+10:00",
    "ended_at": "2026-10-16T20:00:00+10:00",
-   "kind": "emergency",
+   "kind": "planned",
    "is_mass": true,
    "is_natural_disaster": false,
    "source_url": "https://www.vl.ru/off/blackout/168134.html"
   },
   {
-   "house_id": "house_000020",
+   "house_id": "house_000019",
    "category": "hot_water",
-   "started_at": "2026-10-12T15:29:00+10:00",
-   "ended_at": "2026-10-26T12:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168185.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "hot_water",
-   "started_at": "2026-10-28T04:17:00+10:00",
-   "ended_at": "2026-10-28T04:50:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169007.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "hot_water",
-   "started_at": "2026-11-02T09:23:00+10:00",
-   "ended_at": "2026-11-02T17:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169253.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "hot_water",
-   "started_at": "2026-11-11T09:09:00+10:00",
-   "ended_at": "2026-11-11T10:59:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169679.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "hot_water",
-   "started_at": "2026-11-11T16:00:00+10:00",
-   "ended_at": "2026-11-12T00:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169690.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "cold_water",
-   "started_at": "2026-10-16T10:00:00+10:00",
-   "ended_at": "2026-10-16T20:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168429.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "cold_water",
-   "started_at": "2026-10-22T09:00:00+10:00",
-   "ended_at": "2026-10-22T22:00:00+10:00",
+   "started_at": "2026-10-13T12:30:00+10:00",
+   "ended_at": "2026-10-14T20:00:00+10:00",
    "kind": "planned",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168564.html"
+   "source_url": "https://www.vl.ru/off/blackout/168322.html"
+  },
+  {
+   "house_id": "house_000019",
+   "category": "hot_water",
+   "started_at": "2026-10-16T22:12:00+10:00",
+   "ended_at": "2026-10-17T01:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168483.html"
+  },
+  {
+   "house_id": "house_000019",
+   "category": "hot_water",
+   "started_at": "2026-11-06T14:06:00+10:00",
+   "ended_at": "2026-11-06T18:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169475.html"
+  },
+  {
+   "house_id": "house_000019",
+   "category": "hot_water",
+   "started_at": "2026-11-06T14:06:00+10:00",
+   "ended_at": "2026-11-09T12:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169484.html"
+  },
+  {
+   "house_id": "house_000019",
+   "category": "cold_water",
+   "started_at": "2026-10-24T12:59:00+10:00",
+   "ended_at": "2026-10-24T17:00:00+10:00",
+   "kind": "planned",
+   "is_mass": false,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168833.html"
+  },
+  {
+   "house_id": "house_000019",
+   "category": "electricity",
+   "started_at": "2026-10-16T22:10:00+10:00",
+   "ended_at": "2026-10-17T01:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168482.html"
+  },
+  {
+   "house_id": "house_000019",
+   "category": "electricity",
+   "started_at": "2026-11-05T14:41:00+10:00",
+   "ended_at": "2026-11-05T16:00:00+10:00",
+   "kind": "planned",
+   "is_mass": false,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169405.html"
+  },
+  {
+   "house_id": "house_000019",
+   "category": "heating",
+   "started_at": "2026-10-13T12:30:00+10:00",
+   "ended_at": "2026-10-14T20:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/168321.html"
+  },
+  {
+   "house_id": "house_000019",
+   "category": "heating",
+   "started_at": "2026-11-06T14:06:00+10:00",
+   "ended_at": "2026-11-06T18:00:00+10:00",
+   "kind": "emergency",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169476.html"
+  },
+  {
+   "house_id": "house_000019",
+   "category": "heating",
+   "started_at": "2026-11-06T14:06:00+10:00",
+   "ended_at": "2026-11-09T12:00:00+10:00",
+   "kind": "planned",
+   "is_mass": true,
+   "is_natural_disaster": false,
+   "source_url": "https://www.vl.ru/off/blackout/169485.html"
   },
   {
    "house_id": "house_000020",
    "category": "cold_water",
-   "started_at": "2026-10-28T04:19:00+10:00",
-   "ended_at": "2026-10-28T05:07:00+10:00",
+   "started_at": "2026-11-11T09:00:00+10:00",
+   "ended_at": "2026-11-11T19:00:00+10:00",
    "kind": "emergency",
    "is_mass": true,
    "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169008.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "electricity",
-   "started_at": "2026-10-28T04:16:00+10:00",
-   "ended_at": "2026-10-28T04:46:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169006.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "heating",
-   "started_at": "2026-10-12T15:29:00+10:00",
-   "ended_at": "2026-10-26T12:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/168186.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "heating",
-   "started_at": "2026-10-28T04:19:00+10:00",
-   "ended_at": "2026-10-28T05:03:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169009.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "heating",
-   "started_at": "2026-11-02T09:47:00+10:00",
-   "ended_at": "2026-11-02T17:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169254.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "heating",
-   "started_at": "2026-11-11T09:18:00+10:00",
-   "ended_at": "2026-11-11T10:59:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169680.html"
-  },
-  {
-   "house_id": "house_000020",
-   "category": "heating",
-   "started_at": "2026-11-11T16:00:00+10:00",
-   "ended_at": "2026-11-12T00:00:00+10:00",
-   "kind": "emergency",
-   "is_mass": true,
-   "is_natural_disaster": false,
-   "source_url": "https://www.vl.ru/off/blackout/169691.html"
+   "source_url": "https://www.vl.ru/off/blackout/169611.html"
   }
  ]
 }
