@@ -12,6 +12,7 @@ import { enterIndex, nextIndex } from './selection'
 import { useHouseSearch } from './useHouseSearch'
 import { ROUTES, interceptClick, navigate } from '../../lib/router'
 import type { HouseSummary } from '../../types'
+import { HouseMap } from '../map/HouseMap'
 
 function IndexBadge({ value }: { value: number | null | undefined }) {
   if (value === null || value === undefined) {
@@ -203,6 +204,11 @@ export function SearchPage() {
           </button>
         </div>
       )}
+
+      <div className="space-y-2">
+        <HouseMap onSelectHouse={(id) => navigate(ROUTES.house(id))} />
+        <p className="text-xs text-slate-500">Нажмите на маркер, чтобы открыть досье.</p>
+      </div>
 
       {count > 0 && (
         <ul

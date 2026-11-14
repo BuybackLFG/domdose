@@ -14,3 +14,48 @@
     @apply bg-slate-950 text-slate-100 antialiased;
   }
 }
+
+.house-marker {
+  background: transparent;
+  border: none;
+}
+
+.house-marker span {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 9999px;
+  background: #38bdf8;
+  box-shadow: 0 1px 5px rgba(15, 23, 42, 0.45);
+}
+
+.house-marker.house-marker-selected span {
+  width: 24px;
+  height: 24px;
+  background: #34d399;
+  box-shadow:
+    0 0 0 4px rgba(52, 211, 153, 0.22),
+    0 2px 8px rgba(15, 23, 42, 0.4);
+}
+
+.house-marker-label {
+  border: none;
+  border-radius: 9999px;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.3);
+}
+
+.house-marker-label::before {
+  display: none;
+}
+
+.leaflet-container {
+  background: #0f172a;
+  font: inherit;
+}
