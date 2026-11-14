@@ -1,4 +1,4 @@
-import manifest from '../../../public/maps/vladivostok-pilot.manifest.json'
+import manifest from './vladivostok-pilot.manifest.json'
 
 /**
  * Локальная подложка для `L.imageOverlay`. Числа берутся из manifest рядом
