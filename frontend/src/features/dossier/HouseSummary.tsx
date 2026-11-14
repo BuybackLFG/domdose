@@ -72,8 +72,8 @@ export function HouseSummary({
                   aria-hidden="true"
                 >
                   <p className="score-ring__text text-3xl">
-                    {formatScore(detail.data.overall_score)}
-                    <small>/ 100</small>
+                    <span className="score-ring__value">{formatScore(detail.data.overall_score)}</span>
+                    <small className="score-ring__unit">/ 100</small>
                   </p>
                 </div>
                 <div className="score-note">
@@ -92,17 +92,7 @@ export function HouseSummary({
                 <dt>Период</dt>
                 <dd>{period}</dd>
               </div>
-              <div>
-                <dt>Полнота журнала</dt>
-                <dd>неизвестна</dd>
-              </div>
             </dl>
-
-            <p className="caveat" style={{ marginTop: 'var(--s-4)' }}>
-              Полнота журнала неизвестна. Категории без записей входят в расчёт индекса и среднего
-              по выбранным домам с нулевыми наблюдаемыми показателями; это не подтверждает
-              отсутствие отключений или надёжность дома.
-            </p>
           </>
         )}
       </div>

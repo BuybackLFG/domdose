@@ -485,13 +485,16 @@ main > :is(section, .section)[data-screen="free"] > :is(.wrap, .container) { hei
   position: absolute; inset: 0; z-index: 1;
   display: grid; place-items: center; text-align: center;
   box-sizing: border-box;
-  padding-top: 4px;
   font-family: var(--font-display); font-weight: 400;
   font-size: 28px !important; line-height: 1;
   letter-spacing: var(--display-tracking);
   font-variant-numeric: tabular-nums;
 }
-.score-ring__text small { display: block; margin-top: 2px; font-size: 11px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+.score-ring__value { display: block; line-height: 1; transform: translateY(2px); }
+.score-ring__unit {
+  position: absolute; left: 0; right: 0; bottom: 15px;
+  font-size: 11px; font-weight: 400; color: var(--muted); letter-spacing: 0;
+}
 .score-note { display: grid; gap: 4px; }
 .score-note b { font-family: var(--font-display); font-weight: 500; font-size: var(--t-lead); line-height: 1.2; }
 .score-note span, .score-note p { font-size: var(--t-small); color: var(--muted); line-height: 1.45; margin: 0; }
