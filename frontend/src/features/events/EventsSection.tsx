@@ -9,6 +9,8 @@
  * только цветом. Цвет — украшение поверх текста: у части аудитории (и на
  * печати) он не читается.
  */
+import { useEffect, useState } from 'react'
+
 import { formatDate } from '../../lib/format'
 import type { Event } from '../../types'
 
@@ -98,6 +100,10 @@ function EventRow({ item }: { item: TimelineItem }) {
         <p className="mt-1 text-sm break-words text-slate-400">{item.summary}</p>
       )}
 
+      {(item.match === 'range' || item.match === 'street') && <p className="mt-1 text-xs text-amber-200">Привязка к дому приблизительная: {item.match === 'range' ? 'адресный диапазон' : 'улица'}.</p>}
+      {item.durationHours != null && <p className="mt-1 text-xs text-slate-400">Продолжительность: {new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(item.durationHours)} ч ({item.durationBasis === 'actual' ? 'фактическая' : item.durationBasis === 'planned' ? 'заявленная' : 'основание неизвестно'}).</p>}
+      {item.outageKind && <p className="mt-1 text-xs text-slate-400">Тип отключения: {item.outageKind === 'planned' ? 'плановое' : item.outageKind === 'emergency' ? 'аварийное' : 'неизвестен'}.</p>}
+
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
         <KindBadge item={item} />
         {item.confidencePercent !== null && (
@@ -136,7 +142,12 @@ function EmptyEvents() {
 }
 
 export function EventsSection({ events }: { events: Event[] }) {
+  const [page, setPage] = useState(0)
   const items = buildTimeline(events)
+  const pageSize = 10
+  const pageCount = Math.ceil(items.length / pageSize)
+  const safePage = Math.min(page, Math.max(0, pageCount - 1))
+  useEffect(() => setPage(0), [events])
 
   return (
     <section aria-labelledby="events-heading" className="space-y-3">
@@ -151,11 +162,16 @@ export function EventsSection({ events }: { events: Event[] }) {
         <EmptyEvents />
       ) : (
         <ol className="space-y-3">
-          {items.map((item) => (
+          {items.slice(safePage * pageSize, (safePage + 1) * pageSize).map((item) => (
             <EventRow key={item.id} item={item} />
           ))}
         </ol>
       )}
+      {pageCount > 1 && <nav aria-label="Страницы событий" className="flex items-center justify-between gap-3 text-sm text-slate-300">
+        <button type="button" disabled={safePage === 0} onClick={() => setPage(safePage - 1)} className="rounded-lg border border-slate-700 px-3 py-1 disabled:opacity-40">Назад</button>
+        <span aria-live="polite">Страница {safePage + 1} из {pageCount}</span>
+        <button type="button" disabled={safePage === pageCount - 1} onClick={() => setPage(safePage + 1)} className="rounded-lg border border-slate-700 px-3 py-1 disabled:opacity-40">Далее</button>
+      </nav>}
     </section>
   )
 }

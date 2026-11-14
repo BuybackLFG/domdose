@@ -30,6 +30,8 @@ function passportRows(dossier: Dossier): PassportRow[] {
   if (house.uk !== null && house.uk !== undefined) {
     rows.push({ term: 'Управляющая компания', value: house.uk })
   }
+  if (house.avariy == null) rows.push({ term: 'Аварийный статус', value: 'нет данных' })
+  if (house.caprepair == null) rows.push({ term: 'План капремонта', value: 'нет данных' })
   // `wear_pct` — уже проценты по ГИС ЖКХ, а не доля, поэтому `formatWeight`
   // здесь не годится: он умножал бы на 100 второй раз.
   if (house.wear_pct !== null && house.wear_pct !== undefined) {

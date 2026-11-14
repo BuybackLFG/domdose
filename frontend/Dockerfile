@@ -9,9 +9,9 @@ RUN npm ci
 
 COPY . .
 
-# В контейнере фронтенд ходит в API по относительному пути /api,
+# В контейнере фронтенд ходит в API по относительному пути,
 # который nginx проксирует на сервис backend.
-ARG VITE_API_URL=/api
+ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
@@ -22,7 +22,7 @@ COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -q --spider http://127.0.0.1/ || exit 1
+HEALTHCHECK --interval=30s --timeout=35s --start-period=30s --retries=3 \
+  CMD wget -q --spider http://127.0.0.1/ready || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

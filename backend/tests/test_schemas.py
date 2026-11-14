@@ -310,15 +310,13 @@ def test_house_not_found_detail_is_frozen() -> None:
 
 
 def test_placeholder_endpoints_answer_not_implemented() -> None:
-    house = client.get(f"{API_PREFIX}/houses")
-    dossier = client.get(f"{API_PREFIX}/houses/rus-65")
     compare = client.get(f"{API_PREFIX}/compare", params={"ids": "a,b"})
     report = client.post(
         f"{API_PREFIX}/reports",
         json={"house_id": "rus-65", "type": "hot_water", "text": "нет воды"},
     )
 
-    for response in (house, dossier, compare, report):
+    for response in (compare, report):
         assert response.status_code == 501
         assert "detail" in response.json()
 

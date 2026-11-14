@@ -14,7 +14,7 @@
 
 ```bash
 # на сервере
-git clone https://github.com/BuybackLFG/domdose.git
+git clone --branch pred_main https://github.com/BuybackLFG/domdose.git
 cd domdose
 
 cp .env.prod.example .env
@@ -22,7 +22,7 @@ $EDITOR .env            # DOMAIN, ACME_EMAIL, CORS_ORIGINS
 
 docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml ps
-curl -f https://$DOMAIN/health
+curl -f https://$DOMAIN/ready
 ```
 
 ## Обновление
@@ -40,7 +40,8 @@ docker compose -f docker-compose.prod.yml up -d --build
 | Что | Как | Ожидание |
 | --- | --- | --- |
 | Caddy жив | `curl -f https://$DOMAIN/health` | `ok` |
-| Backend через прокси | `curl -f https://$DOMAIN/api/health` | `{"status":"ok"}` |
+| Готовность данных | `curl -f https://$DOMAIN/api/ready` | HTTP 200; при отсутствии или ошибке датасета — 503 |
+| Список и досье | `curl -f https://$DOMAIN/api/houses`, затем `/api/houses/<id>` | HTTP 200, реальные данные |
 | Frontend | `curl -f https://$DOMAIN/` | 200, HTML |
 | CORS | открыть сайт, статус backend на главной | `ok` |
 | Контейнеры | `docker compose -f docker-compose.prod.yml ps` | все `healthy` |
@@ -50,9 +51,18 @@ docker compose -f docker-compose.prod.yml up -d --build
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
 curl -H "Host: localhost" http://127.0.0.1/health
-curl -H "Host: localhost" http://127.0.0.1/api/health
+curl -f http://127.0.0.1/ready
+curl -f http://127.0.0.1/api/houses
+curl -f http://127.0.0.1/api/houses/h-01
 docker compose -f docker-compose.prod.yml down
 ```
+
+Для локального запуска задайте `DOMAIN=http://localhost` в `.env`; Caddy будет работать по HTTP.
+Образ backend собирается из корня репозитория и включает runtime-пакет и датасет
+`data/datasets/communal-outages-2026.json`. Проверка готовности проверяет этот
+датасет; `DATASET_PATH` позволяет указать другой путь внутри контейнера.
+Фронтенд использует относительные URL `/api/...`, production использует API.
+CI дополнительно проверяет запрос браузера и отказ готовности при отсутствии данных.
 
 Так проверяется вся связка, кроме TLS: сертификат Caddy выпустит только на реальном домене.
 
