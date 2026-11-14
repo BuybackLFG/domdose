@@ -24,6 +24,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ready */
+        get: operations["ready_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/houses": {
         parameters: {
             query?: never;
@@ -31,10 +48,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Поиск домов по адресу или району
-         * @description Реализация — задача B1 (`app/core/search.py`).
-         */
+        /** Поиск домов по адресу или району */
         get: operations["list_houses_api_houses_get"];
         put?: never;
         post?: never;
@@ -51,10 +65,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Досье дома: паспорт, индекс, факты, события, чек-лист
-         * @description Реализация — задача B2 (`app/core/dossier.py`).
-         */
+        /** Досье дома */
         get: operations["get_dossier_api_houses__house_id__get"];
         put?: never;
         post?: never;
@@ -115,6 +126,55 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Baseline */
+        Baseline: {
+            /** Frequency */
+            frequency: number | null;
+            /** Hours */
+            hours: number | null;
+            /** Maximum */
+            maximum: number | null;
+            /** City Houses */
+            city_houses: number | null;
+            /** Exposures */
+            exposures: number | null;
+            /** Maximum Method */
+            maximum_method: string;
+        };
+        /** CalculationReport */
+        CalculationReport: {
+            /** Policy Version */
+            policy_version: string;
+            window: components["schemas"]["Window"];
+            /** Houses */
+            houses: components["schemas"]["HouseRating"][];
+            /** Source Spans */
+            source_spans: components["schemas"]["SourceSpan"][];
+            /** Limitations */
+            limitations: string[];
+            /** Diagnostics */
+            diagnostics: components["schemas"]["Diagnostic"][];
+        };
+        /** CategoryRating */
+        CategoryRating: {
+            /** Type */
+            type: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "approximate" | "unavailable" | "not_applicable";
+            /** Reason */
+            reason: string | null;
+            /** Estimated */
+            estimated: boolean;
+            metrics: components["schemas"]["MetricTriple"];
+            baseline: components["schemas"]["Baseline"];
+            ratios: components["schemas"]["MetricTriple"];
+            penalties: components["schemas"]["MetricTriple"];
+            /** Score */
+            score: number | null;
+        };
         /**
          * ChecklistItem
          * @description Вопрос продавцу, выведенный из конкретного факта или события дома.
@@ -224,6 +284,17 @@ export interface components {
          * @enum {string}
          */
         ComponentKey: "communications" | "nature" | "building" | "transport" | "safety";
+        /** Diagnostic */
+        Diagnostic: {
+            /** Code */
+            code: string;
+            /** Path */
+            path: (string | number)[];
+            /** Event Ids */
+            event_ids: string[];
+            /** House Ids */
+            house_ids: string[];
+        };
         /**
          * Dossier
          * @description Полное досье: паспорт, индекс, факты, лента событий, чек-лист, источники.
@@ -235,6 +306,7 @@ export interface components {
             house: components["schemas"]["House"];
             /** @description null, если индекс ещё не посчитан: досье без индекса валидно */
             index?: components["schemas"]["HouseIndex"] | null;
+            rating?: components["schemas"]["CalculationReport"] | null;
             /** Facts */
             facts?: components["schemas"]["Fact"][];
             /** Events */
@@ -249,6 +321,13 @@ export interface components {
              * @default аналитика по открытым данным, не гарантия
              */
             disclaimer: string;
+        };
+        /** EffectiveWeight */
+        EffectiveWeight: {
+            /** Type */
+            type: string;
+            /** Weight */
+            weight: number;
         };
         /**
          * ErrorResponse
@@ -291,11 +370,8 @@ export interface components {
              * @description Дата события, ISO
              */
             date: string;
-            /**
-             * Severity
-             * @description Серьёзность: 1 низкая, 3 критичная
-             */
-            severity: number;
+            /** Severity */
+            severity: number | null;
             /** Title */
             title: string;
             /** Summary */
@@ -305,14 +381,24 @@ export interface components {
              * @description Ссылка на открытый источник (http/https)
              */
             source_url: string;
-            /**
-             * Confidence
-             * @description Уверенность в событии, 0–1
-             * @default 1
-             */
-            confidence: number;
+            /** Confidence */
+            confidence?: number | null;
             /** @default official */
             kind: components["schemas"]["EventKind"];
+            /** Match */
+            match?: ("exact" | "range" | "street") | null;
+            /** Outage Kind */
+            outage_kind?: ("planned" | "emergency" | "unknown") | null;
+            /** Start */
+            start?: string | null;
+            /** End Planned */
+            end_planned?: string | null;
+            /** End Actual */
+            end_actual?: string | null;
+            /** Duration Hours */
+            duration_hours?: number | null;
+            /** Duration Basis */
+            duration_basis?: ("actual" | "planned" | "unknown") | null;
         };
         /**
          * EventKind
@@ -323,7 +409,7 @@ export interface components {
          *     resident — сообщение жильца через live-краудсорсинг.
          * @enum {string}
          */
-        EventKind: "official" | "ai" | "resident";
+        EventKind: "official" | "ai" | "resident" | "aggregator";
         /**
          * EventType
          * @description Тип события. Значения зафиксированы: их видят и data-owner, и фронтенд.
@@ -435,12 +521,12 @@ export interface components {
              * Avariy
              * @description Аварийный дом по реестру
              */
-            avariy: boolean;
+            avariy: boolean | null;
             /**
              * Caprepair
              * @description В плане капремонта
              */
-            caprepair: boolean;
+            caprepair: boolean | null;
             /** Developer */
             developer?: string | null;
             /**
@@ -507,6 +593,24 @@ export interface components {
              */
             retrieved_at?: string | null;
         };
+        /** HouseRating */
+        HouseRating: {
+            /** House Id */
+            house_id: string;
+            /** Categories */
+            categories: components["schemas"]["CategoryRating"][];
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "approximate" | "unavailable" | "not_applicable";
+            /** Overall */
+            overall: number | null;
+            /** Effective Weights */
+            effective_weights: components["schemas"]["EffectiveWeight"][];
+            /** Limiting Categories */
+            limiting_categories: string[];
+        };
         /**
          * HouseSummary
          * @description Элемент списка `GET /api/houses?q=` (задача B1).
@@ -544,6 +648,15 @@ export interface components {
              * @description Почему индекс изменился именно так
              */
             explanation: string;
+        };
+        /** MetricTriple */
+        MetricTriple: {
+            /** Frequency */
+            frequency: number | null;
+            /** Hours */
+            hours: number | null;
+            /** Maximum */
+            maximum: number | null;
         };
         /**
          * ReportCreate
@@ -604,6 +717,30 @@ export interface components {
              */
             retrieved_at: string;
         };
+        /** SourceInterval */
+        SourceInterval: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+        };
+        /** SourceSpan */
+        SourceSpan: {
+            /** Type */
+            type: string;
+            /** Intervals */
+            intervals: components["schemas"]["SourceInterval"][];
+            /** Gaps */
+            gaps: components["schemas"]["SourceInterval"][];
+            /** Unknown Source Ids */
+            unknown_source_ids: string[];
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -616,6 +753,19 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** Window */
+        Window: {
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /**
+             * End Exclusive
+             * Format: date-time
+             */
+            end_exclusive: string;
         };
     };
     responses: never;
@@ -655,10 +805,38 @@ export interface operations {
             };
         };
     };
+    ready_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+            /** @description Внутренняя ошибка */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_houses_api_houses_get: {
         parameters: {
             query?: {
-                /** @description Подстрока адреса или района */
                 q?: string;
             };
             header?: never;

@@ -5,7 +5,9 @@
 """
 
 from datetime import date as Date
+from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -42,6 +44,7 @@ class EventKind(StrEnum):
     official = "official"
     ai = "ai"
     resident = "resident"
+    aggregator = "aggregator"
 
 
 class Event(BaseModel):
@@ -56,12 +59,19 @@ class Event(BaseModel):
     district: str | None = Field(default=None, description="Район, если событие не про дом")
     type: EventType
     date: Date = Field(description="Дата события, ISO")
-    severity: Severity
+    severity: Severity | None
     title: str = Field(min_length=1, max_length=300)
     summary: str | None = Field(default=None, max_length=2000)
     source_url: SourceUrl
-    confidence: Confidence = 1.0
+    confidence: Confidence | None = 1.0
     kind: EventKind = EventKind.official
+    match: Literal["exact", "range", "street"] | None = None
+    outage_kind: Literal["planned", "emergency", "unknown"] | None = None
+    start: datetime | None = None
+    end_planned: datetime | None = None
+    end_actual: datetime | None = None
+    duration_hours: float | None = None
+    duration_basis: Literal["actual", "planned", "unknown"] | None = None
 
     @model_validator(mode="after")
     def _needs_house_or_district(self) -> "Event":

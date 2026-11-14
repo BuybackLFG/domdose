@@ -5,10 +5,14 @@ description = "ДомДосье — backend MVP"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "domdose-core",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "pydantic-settings>=2.6",
 ]
+
+[tool.uv.sources]
+domdose-core = { path = ".." }
 
 [project.scripts]
 seeded = "app.ingest.seed:main"
