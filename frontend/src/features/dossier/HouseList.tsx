@@ -16,7 +16,7 @@ export function HouseList({ houses, districts, selectedHouseId, onSelect }: Hous
         Дома
       </h2>
       <p className="mt-1 text-sm text-text-secondary">
-        {formatAddressCount(houses.length)}, включая дома без отключений
+        {formatAddressCount(houses.length)}, включая дома без записей в источнике
       </p>
 
       <ul className="mt-4 grid gap-2 lg:grid-cols-2" aria-label="Список адресов">
@@ -34,7 +34,7 @@ export function HouseList({ houses, districts, selectedHouseId, onSelect }: Hous
             >
               <span className="block text-sm font-medium leading-5">{house.address}</span>
               <span className="mt-1 block text-xs text-text-secondary">
-                {districts.get(house.house_id) ?? 'Район не определён'} · Рейтинг {formatScore(house.overall_score)} / 100
+                {districts.get(house.house_id) ?? 'Район не определён'} · {house.overall_score === null ? 'Нет записей за период' : `Индекс ${formatScore(house.overall_score)} / 100`}
               </span>
             </button>
           </li>

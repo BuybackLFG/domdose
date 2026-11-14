@@ -44,20 +44,22 @@ class CategoryDetail(BaseModel):
 class HouseCategories(BaseModel):
     """Ровно четыре категории в фиксированном порядке."""
 
-    hot_water: CategoryDetail
-    cold_water: CategoryDetail
-    electricity: CategoryDetail
-    heating: CategoryDetail
+    hot_water: CategoryDetail | None
+    cold_water: CategoryDetail | None
+    electricity: CategoryDetail | None
+    heating: CategoryDetail | None
 
 
 class HouseSummary(BaseModel):
-    """Краткая карточка дома в списке."""
+    """Индекс найденных записей или null; покрытие источника неизвестно."""
 
     model_config = ConfigDict(from_attributes=True)
 
     house_id: str
     address: str
-    overall_score: float = Field(ge=0, le=1, allow_inf_nan=False)
+    overall_score: float | None = Field(ge=0, le=1, allow_inf_nan=False)
+    event_count: int = Field(ge=0)
+    coverage: Literal["unknown"] = "unknown"
 
 
 class HouseListResponse(BaseModel):
@@ -82,13 +84,15 @@ class HouseEvent(BaseModel):
 
 
 class HouseDetailResponse(BaseModel):
-    """Детальное досье одного дома с событиями и худшей категорией."""
+    """Досье по найденным записям; null не означает отсутствие отключений."""
 
     scope: Scope
     window: Window
     house_id: str
     address: str
-    overall_score: float = Field(ge=0, le=1, allow_inf_nan=False)
+    overall_score: float | None = Field(ge=0, le=1, allow_inf_nan=False)
+    event_count: int = Field(ge=0)
+    coverage: Literal["unknown"] = "unknown"
     categories: HouseCategories
-    weakest: CategoryName
+    weakest: CategoryName | None
     events: list[HouseEvent]

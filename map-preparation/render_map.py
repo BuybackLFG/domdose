@@ -851,7 +851,7 @@ def zoom_levels(frame):
     z_overview = zoom_for(span / OVERVIEW.width)
     z_detail = zoom_for(span / DETAIL.width)
     detail_min = math.floor(z_overview + math.log2(OVERVIEW_STRETCH_LIMIT)) + 1
-    max_zoom = math.floor(z_detail + 1)
+    max_zoom = math.floor(z_detail + 4)
     if detail_min > max_zoom:
         raise RenderError("zoom_levels_invalid", "detail.min_zoom больше max_zoom")
     return {"overview": z_overview, "detail": z_detail, "detail_min_zoom": detail_min,
@@ -914,7 +914,7 @@ def build_manifest(frame, paths, levels, extra):
                             "ground_meters_per_pixel)",
             "detail_min_zoom_rule": "первый целый зум, где обзорный уровень растянут "
                                     f"более чем в {OVERVIEW_STRETCH_LIMIT:g} раза",
-            "max_zoom_rule": "целая часть (зум детального уровня + 1)",
+            "max_zoom_rule": "целая часть (зум детального уровня + 4)",
             "levels": {
                 level.name: {
                     "image": level.url, "width": level.width, "height": level.height,

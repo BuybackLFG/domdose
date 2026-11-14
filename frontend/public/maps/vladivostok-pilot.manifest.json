@@ -23,7 +23,7 @@
     "image_sha256": "cee4e98436e2fb333cde7eba9b74773f3223457c18f406e47e8037c74b8984e4",
     "min_zoom": 13
   },
-  "max_zoom": 14,
+  "max_zoom": 17,
   "attribution": "© OpenStreetMap contributors",
   "license": "ODbL-1.0",
   "license_url": "https://opendatacommons.org/licenses/odbl/1-0/",
@@ -73,7 +73,7 @@
     "frame": "охват 20 домов + 1500 м EPSG:3857, симметрично расширен вокруг центра до 2:1",
     "zoom_formula": "z = log2(156543.03392 * cos(lat_center) / ground_meters_per_pixel)",
     "detail_min_zoom_rule": "первый целый зум, где обзорный уровень растянут более чем в 1.3 раза",
-    "max_zoom_rule": "целая часть (зум детального уровня + 1)",
+    "max_zoom_rule": "целая часть (зум детального уровня + 4)",
     "levels": {
       "overview": {
         "image": "/maps/vladivostok-pilot.png",

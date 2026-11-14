@@ -68,11 +68,19 @@ def get_ready(request: Request) -> dict:
 def list_houses(request: Request) -> HouseListResponse:
     """Список 20 домов пилотной выборки с общим рейтингом."""
     snapshot = _get_service(request).load_snapshot()
+    event_counts = {house.house_id: 0 for house in snapshot.houses}
+    for item in snapshot.events:
+        event_counts[item.event.house_id] += 1
     houses = [
         HouseSummary(
             house_id=house.house_id,
             address=house.address,
-            overall_score=snapshot.rating.ratings[house.house_id].overall_score,
+            overall_score=(
+                snapshot.rating.ratings[house.house_id].overall_score
+                if event_counts[house.house_id]
+                else None
+            ),
+            event_count=event_counts[house.house_id],
         )
         for house in snapshot.houses
     ]
@@ -93,6 +101,7 @@ def get_house(house_id: str, request: Request) -> HouseDetailResponse:
         raise InvalidRequestError("house_id must match ^house_[0-9]{6}$")
     dossier = service.get_house(house_id)
     house_rating = dossier.rating
+    observed_categories = {item.event.category for item in dossier.events}
     categories = HouseCategories(
         **{
             name: CategoryDetail(
@@ -104,6 +113,8 @@ def get_house(house_id: str, request: Request) -> HouseDetailResponse:
                 ),
                 score=house_rating.categories[UtilityCategory(name)].score,
             )
+            if UtilityCategory(name) in observed_categories
+            else None
             for name in CATEGORY_NAMES
         }
     )
@@ -112,8 +123,13 @@ def get_house(house_id: str, request: Request) -> HouseDetailResponse:
         window=Window(start=snapshot.window.start, end=snapshot.window.end),
         house_id=dossier.house.house_id,
         address=dossier.house.address,
-        overall_score=house_rating.overall_score,
+        overall_score=house_rating.overall_score if dossier.events else None,
+        event_count=len(dossier.events),
         categories=categories,
-        weakest=house_rating.weakest.value,
+        weakest=(
+            house_rating.weakest.value
+            if house_rating.weakest in observed_categories
+            else None
+        ),
         events=[_house_event(item) for item in dossier.events],
     )

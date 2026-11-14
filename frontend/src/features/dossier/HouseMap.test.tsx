@@ -282,3 +282,54 @@ describe('положение markers и уровни подложки', () => {
     expectNoForbiddenFragments(document.body);
   });
 });
+
+it('позволяет отдалить карту до полного кадра и приблизить кнопками и колесом', async () => {
+  vi.spyOn(L.Map.prototype, 'getSize').mockImplementation(() => L.point(1000, 400));
+  const probe = probeLeaflet();
+  installFetch();
+  const { container } = render(<DossierPage />);
+  await waitFor(() => expect(probe.points()).toHaveLength(20));
+  const map = probe.onlyMap();
+  expect(map.scrollWheelZoom.enabled()).toBe(true);
+  expect(map.keyboard.enabled()).toBe(true);
+  expect(map.touchZoom.enabled()).toBe(true);
+  expect(map.getMaxZoom()).toBeGreaterThanOrEqual(17);
+  act(() => map.setZoom(map.getMinZoom(), { animate: false }));
+  const bounds = readManifest().bounds;
+  expect(map.getBounds().contains([bounds.south, bounds.west])).toBe(true);
+  expect(map.getBounds().contains([bounds.north, bounds.east])).toBe(true);
+  const before = map.getZoom();
+  const plus = container.querySelector<HTMLElement>('.leaflet-control-zoom-in');
+  expect(plus).not.toBeNull();
+  act(() => plus?.click());
+  expect(map.getZoom()).toBeGreaterThan(before);
+  const minus = container.querySelector<HTMLElement>('.leaflet-control-zoom-out');
+  expect(minus).not.toBeNull();
+  act(() => minus?.click());
+  expect(map.getZoom()).toBeCloseTo(before);
+});
+
+
+it.each([[1000, 400], [375, 320]])('при первоначальном виде все маркеры видны в контейнере %i×%i', async (width, height) => {
+  vi.spyOn(L.Map.prototype, 'getSize').mockImplementation(() => L.point(width, height));
+  const probe = probeLeaflet();
+  installFetch();
+  render(<DossierPage />);
+  await waitFor(() => expect(probe.points()).toHaveLength(20));
+  const bounds = probe.onlyMap().getBounds();
+  for (const marker of probe.points()) expect(bounds.contains(marker.getLatLng())).toBe(true);
+});
+
+
+it('передаёт адреса во всплывающие подписи как текстовые DOM-узлы', async () => {
+  const bindTooltip = vi.spyOn(L.Marker.prototype, 'bindTooltip');
+  installFetch();
+  render(<DossierPage />);
+  await waitFor(() => expect(bindTooltip).toHaveBeenCalled());
+  for (const call of bindTooltip.mock.calls) {
+    expect(call[0]).toBeInstanceOf(HTMLElement);
+    const node = call[0] as HTMLElement;
+    expect(node.children).toHaveLength(0);
+    expect(PILOT_HOUSES.some((house) => house.address === node.textContent)).toBe(true);
+  }
+});
