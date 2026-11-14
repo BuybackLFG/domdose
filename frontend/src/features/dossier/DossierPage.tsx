@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CategoryScores } from './CategoryScores';
 import { HeroPreview } from './HeroPreview';
 import { HouseEvents } from './HouseEvents';
@@ -12,7 +12,7 @@ import { formatScore, scoreBand } from './format';
 import { useHouseDossier } from './useHouseDossier';
 
 const HEADER_NOTE = 'Приближённые данные по публичным объявлениям об отключениях. '
-  + 'Дома сравниваются между собой, а не со всем Владивостоком.';
+  + 'Дома сравниваются между собой.';
 
 function detailStatus(status: 'idle' | 'loading' | 'success' | 'error') {
   if (status === 'success') return 'success' as const;
@@ -38,6 +38,8 @@ export function DossierPage() {
     retryDetail,
   } = useHouseDossier();
 
+  const [navOpen, setNavOpen] = useState(false);
+
   const districts = useMemo(
     () => new Map(PILOT_HOUSES.map((house) => [house.house_id, house.district] as const)),
     [],
@@ -51,7 +53,7 @@ export function DossierPage() {
     <div className="page">
       <a href="#dossier" className="skip-link">Перейти к досье дома</a>
 
-      <header className="nav">
+      <header className={`nav${navOpen ? ' is-open' : ''}`}>
         <div className="nav__bar wrap">
           <a className="nav__logo" href="#top" aria-label="ДомДосье — к началу страницы">
             <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
@@ -67,7 +69,7 @@ export function DossierPage() {
             </svg>
             ДомДосье
           </a>
-          <nav id="site-nav" className="nav__links" aria-label="Разделы страницы">
+          <nav id="site-nav" className="nav__links" aria-label="Разделы страницы" onClick={() => setNavOpen(false)}>
             <a className="nav__link" href="#sample">Выборка</a>
             <a className="nav__link" href="#map">Карта</a>
             <a className="nav__link" href="#houses">Дома</a>
@@ -80,8 +82,9 @@ export function DossierPage() {
             className="nav__toggle"
             type="button"
             aria-label="Меню"
-            aria-expanded="false"
+            aria-expanded={navOpen}
             aria-controls="site-nav"
+            onClick={() => setNavOpen((open) => !open)}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
               <path d="M2 5h14M2 13h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -198,10 +201,6 @@ export function DossierPage() {
           <div className="wrap">
             <div className="section-head">
               <h2 id="dossier-heading">Досье выбранного дома</h2>
-              <p>
-                Сводка, четыре оценки и ограничение общего индекса. Числа считаются по найденным
-                записям за 30 дней; отсутствие данных не превращается в ноль.
-              </p>
             </div>
 
             {list.status === 'loading' && (
