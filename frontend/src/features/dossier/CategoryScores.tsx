@@ -1,6 +1,6 @@
 import { categoryLabel, formatScore } from './format';
 import type { Loadable } from './useHouseDossier';
-import type { HouseCategories, HouseDetailResponse } from './types';
+import type { HouseCategories, HouseDetailResponse, MetricValues } from './types';
 
 interface CategoryScoresProps {
   detail: Loadable<HouseDetailResponse>;
@@ -17,10 +17,10 @@ const METRIC_NOTES: readonly string[] = [
   'Частота — сколько раз отключали за 30 дней. Аварийное отключение считается за 1, плановое — за 0,4; массовое или стихийное — вдвое меньше.',
   'Часы — суммарная длительность отключений за 30 дней с теми же весами.',
   'Максимум — наибольшая длительность одного отключения после умножения на его вес, в часах.',
-  'Оценка категории: 100 — не хуже среднего по всем домам; чем сильнее дом превышает среднее, тем ниже оценка.',
+  'Оценки рассчитаны по найденным записям и сравнению с выбранными домами. Полнота журнала неизвестна.',
 ];
 
-function Metrics({ values, title }: { values: HouseCategories[keyof HouseCategories]['metrics']; title: string }) {
+function Metrics({ values, title }: { values: MetricValues; title: string }) {
   return (
     <dl aria-label={title} className="mt-3 grid grid-cols-3 gap-2 text-xs">
       <div>
@@ -56,6 +56,7 @@ function CategoryBody({ detail, category }: CategoryScoresProps & { category: ke
       );
     case 'success': {
       const categoryDetail = detail.data.categories[category];
+      if (categoryDetail === null) return <p className="mt-3 text-sm text-text-secondary">Нет записей за период</p>;
       return (
         <>
           <p className="mt-2 text-2xl font-semibold text-accent">

@@ -39,12 +39,19 @@ export function HouseSummary({ house, district, detail, errorMessage, onRetryDet
 
         {detail.status === 'success' && (
           <div className="rounded-xl bg-accent-soft p-4">
-            <p className="text-sm text-text-secondary">Общий рейтинг</p>
-            <p className="mt-1 text-3xl font-semibold text-accent">
-              {formatScore(detail.data.overall_score)}
-              <span className="ml-1 text-base font-medium text-text-secondary">/ 100</span>
-            </p>
+            {detail.data.overall_score === null ? (
+              <p className="text-sm font-medium text-text">Нет записей за период — данных для оценки недостаточно.</p>
+            ) : (
+              <>
+                <p className="text-sm text-text-secondary">Индекс по найденным записям</p>
+                <p className="mt-1 text-3xl font-semibold text-accent">
+                  {formatScore(detail.data.overall_score)}
+                  <span className="ml-1 text-base font-medium text-text-secondary">/ 100</span>
+                </p>
+              </>
+            )}
             <p className="mt-2 text-sm text-text-secondary">{formatPeriod(detail.data.window)}</p>
+            <p className="mt-2 text-sm text-text-secondary">Полнота журнала неизвестна. Категории без записей входят в расчёт индекса и среднего по выбранным домам с нулевыми наблюдаемыми показателями; это не подтверждает отсутствие отключений или надёжность дома.</p>
           </div>
         )}
 

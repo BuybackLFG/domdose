@@ -34,16 +34,18 @@ export interface CategoryDetail {
 }
 
 export interface HouseCategories {
-  hot_water: CategoryDetail;
-  cold_water: CategoryDetail;
-  electricity: CategoryDetail;
-  heating: CategoryDetail;
+  hot_water: CategoryDetail | null;
+  cold_water: CategoryDetail | null;
+  electricity: CategoryDetail | null;
+  heating: CategoryDetail | null;
 }
 
 export interface HouseSummary {
   house_id: HouseId;
   address: string;
-  overall_score: number;
+  overall_score: number | null;
+  event_count?: number;
+  coverage?: 'unknown';
 }
 
 export interface HouseListResponse {
@@ -69,13 +71,15 @@ export interface HouseDetailResponse {
   window: TimeWindow;
   house_id: HouseId;
   address: string;
-  overall_score: number;
+  overall_score: number | null;
+  event_count?: number;
+  coverage?: 'unknown';
   categories: HouseCategories;
 
   /** Вычисляется backend; frontend не ищет минимум самостоятельно. */
-  weakest: UtilityCategory;
+  weakest: UtilityCategory | null;
 
-  /** Пустой массив — корректное отсутствие событий при доступных данных. */
+  /** Пустой массив не доказывает отсутствие отключений. */
   events: HouseEvent[];
 }
 

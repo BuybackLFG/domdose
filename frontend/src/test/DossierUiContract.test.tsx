@@ -53,11 +53,10 @@ const METRIC_EXPLANATIONS = [
     + 'плановое — за 0,4; массовое или стихийное — вдвое меньше.',
   'Часы — суммарная длительность отключений за 30 дней с теми же весами.',
   'Максимум — наибольшая длительность одного отключения после умножения на его вес, в часах.',
-  'Оценка категории: 100 — не хуже среднего по всем домам; чем сильнее дом превышает '
-    + 'среднее, тем ниже оценка.',
+  'Оценки рассчитаны по найденным записям и сравнению с выбранными домами. Полнота журнала неизвестна.',
 ];
 const FILTER_LABELS = ['Все', 'Горячая вода', 'Холодная вода', 'Электричество', 'Отопление'];
-const EMPTY_CATEGORY_TEXT = 'Нет событий этой категории за период.';
+const EMPTY_CATEGORY_TEXT = 'В источнике не найдено записей этой категории за период.';
 const NO_EVENTS = /нет зафиксированных отключений/i;
 
 function renderWith(handler: FetchHandler) {
@@ -149,6 +148,20 @@ function allScores(score: number, overrides: Partial<Record<UtilityCategory, num
 }
 
 describe('шапка, список и поиск', () => {
+  it('не показывает баллы при отсутствии записей и объясняет неизвестное покрытие', async () => {
+    await renderLoaded((number) => makeDetail(number, {
+      overall_score: null,
+      event_count: 0,
+      coverage: 'unknown',
+      categories: { hot_water: null, cold_water: null, electricity: null, heating: null },
+      weakest: null,
+      events: [],
+    }));
+    expect(await screen.findByText(/данных для оценки недостаточно/i)).toBeVisible();
+    expect(within(categoriesSection()).getAllByText('Нет записей за период')).toHaveLength(4);
+    expect(screen.queryByRole('heading', { name: 'Худшая категория' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Категории без записей входят в расчёт/)).toBeVisible();
+  });
   it('показывает заголовок и видимую честную пометку о приближённых данных', async () => {
     await renderLoaded((number) => makeDetail(number));
 
@@ -163,7 +176,7 @@ describe('шапка, список и поиск', () => {
     await renderLoaded((number) => makeDetail(number));
 
     const heading = screen.getByRole('heading', { name: 'Дома' });
-    const subtitle = exactTextElement(sectionOf(heading), '20 адресов, включая дома без отключений');
+    const subtitle = exactTextElement(sectionOf(heading), '20 адресов, включая дома без записей в источнике');
     expectSeen(subtitle);
   });
 

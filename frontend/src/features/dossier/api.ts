@@ -97,7 +97,8 @@ function validateMetricValues(value: unknown, label: string): MetricValues {
   };
 }
 
-function validateCategory(value: unknown, category: UtilityCategory): CategoryDetail {
+function validateCategory(value: unknown, category: UtilityCategory): CategoryDetail | null {
+  if (value === null) return null;
   if (!isRecord(value) || !isScore(value.score)) {
     throw new Error(`Некорректная категория: ${category}`);
   }
@@ -120,7 +121,9 @@ function validateHouseSummary(value: unknown): HouseSummary {
     !isRecord(value)
     || !isHouseId(value.house_id)
     || !isNonEmptyString(value.address)
-    || !isScore(value.overall_score)
+    || !(value.overall_score === null || isScore(value.overall_score))
+    || !(value.event_count === undefined || (Number.isInteger(value.event_count) && (value.event_count as number) >= 0))
+    || !(value.coverage === undefined || value.coverage === 'unknown')
   ) {
     throw new Error('Некорректная карточка дома');
   }
@@ -128,6 +131,8 @@ function validateHouseSummary(value: unknown): HouseSummary {
     house_id: value.house_id,
     address: value.address,
     overall_score: value.overall_score,
+    event_count: value.event_count as number | undefined,
+    coverage: value.coverage as 'unknown' | undefined,
   };
 }
 
@@ -181,7 +186,7 @@ export function validateHouseDetailResponse(value: unknown): HouseDetailResponse
   if (!isRecord(value)) throw new Error('Некорректный ответ досье дома');
   const summary = validateHouseSummary(value);
   if (!Array.isArray(value.events)) throw new Error('Отсутствует список событий');
-  if (!isCategory(value.weakest)) throw new Error('Некорректная худшая категория');
+  if (!(value.weakest === null || isCategory(value.weakest))) throw new Error('Некорректная худшая категория');
 
   return {
     scope: validateScope(value.scope),
@@ -189,6 +194,8 @@ export function validateHouseDetailResponse(value: unknown): HouseDetailResponse
     house_id: summary.house_id,
     address: summary.address,
     overall_score: summary.overall_score,
+    event_count: summary.event_count,
+    coverage: summary.coverage,
     categories: validateCategories(value.categories),
     weakest: value.weakest,
     events: value.events.map(validateEvent),

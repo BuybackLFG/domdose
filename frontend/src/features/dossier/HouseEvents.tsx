@@ -95,7 +95,7 @@ export function HouseEvents({ events }: HouseEventsProps) {
 
           {filtered.length === 0 ? (
             <p className="mt-3 rounded-xl bg-surface-subtle px-3 py-2 text-sm text-text-secondary">
-              Нет событий этой категории за период.
+              В источнике не найдено записей этой категории за период.
             </p>
           ) : (
             <ul ref={listRef} aria-label="События дома" className="mt-3 space-y-2">

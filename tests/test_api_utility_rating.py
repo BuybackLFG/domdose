@@ -149,10 +149,20 @@ def test_ready_and_happy_list_have_pilot_scope_and_twenty_houses(client):
     assert payload["window"] == {"start": WINDOW_START, "end": WINDOW_END}
     assert len(payload["houses"]) == 20
     for index, house in enumerate(payload["houses"], start=1):
-        assert set(house) == {"house_id", "address", "overall_score"}
+        assert set(house) == {
+            "house_id",
+            "address",
+            "overall_score",
+            "event_count",
+            "coverage",
+        }
         assert house["house_id"] == f"house_{index:06d}"
         assert house["address"] == f"Владивосток, улица Пилотная {index:02d}, 1"
-        assert house["overall_score"] == (0.25 if index == 1 else 1.0)
+        assert house["overall_score"] == (
+            pytest.approx(0.5722911990971438) if index == 1 else None
+        )
+        assert house["event_count"] == (2 if index == 1 else 0)
+        assert house["coverage"] == "unknown"
 
 
 def test_happy_detail_exposes_exact_metrics_penalties_and_scores(client):
@@ -168,7 +178,9 @@ def test_happy_detail_exposes_exact_metrics_penalties_and_scores(client):
     assert payload["window"] == {"start": WINDOW_START, "end": WINDOW_END}
     assert payload["house_id"] == "house_000001"
     assert payload["address"] == "Владивосток, улица Пилотная 01, 1"
-    assert payload["overall_score"] == 0.25
+    assert payload["overall_score"] == pytest.approx(0.5722911990971438)
+    assert payload["coverage"] == "unknown"
+    assert payload["event_count"] == 2
     assert tuple(payload["categories"]) == CATEGORIES
     electricity = payload["categories"]["electricity"]
     assert electricity["metrics"] == {
@@ -176,21 +188,20 @@ def test_happy_detail_exposes_exact_metrics_penalties_and_scores(client):
         "hours": 9.0,
         "longest": 5.0,
     }
-    assert electricity["penalties"] == {metric: 1.0 for metric in METRICS}
-    assert electricity["score"] == 0.0
+    assert electricity["penalties"] == pytest.approx(
+        {
+            "frequency": 0.38847453640245716,
+            "hours": 0.9286250648823842,
+            "longest": 0.754344801944598,
+        }
+    )
+    assert electricity["score"] == pytest.approx(0.32229119909714377)
     for name, category in payload["categories"].items():
-        assert set(category) == {"metrics", "penalties", "score"}
-        assert set(category["metrics"]) == set(METRICS)
-        assert set(category["penalties"]) == set(METRICS)
         if name != "electricity":
-            assert category["metrics"] == {metric: 0.0 for metric in METRICS}
-            assert category["penalties"] == {metric: 0.0 for metric in METRICS}
-            assert category["score"] == 1.0
+            assert category is None
 
 
-def test_complete_data_with_empty_events_returns_zero_metrics_and_all_ones(
-    client, paths
-):
+def test_empty_journal_does_not_claim_perfect_scores(client, paths):
     dataset_path, _ = paths
     raw = valid_raw()
     raw["events"] = []
@@ -201,13 +212,13 @@ def test_complete_data_with_empty_events_returns_zero_metrics_and_all_ones(
     assert response.status_code == 200
     houses = response.json()["houses"]
     assert len(houses) == 20
-    assert all(house["overall_score"] == 1.0 for house in houses)
+    assert all(
+        house["overall_score"] is None and house["event_count"] == 0 for house in houses
+    )
     detail = client.get("/api/houses/house_000001")
     assert detail.status_code == 200
-    for category in detail.json()["categories"].values():
-        assert category["metrics"] == {metric: 0.0 for metric in METRICS}
-        assert category["penalties"] == {metric: 0.0 for metric in METRICS}
-        assert category["score"] == 1.0
+    assert all(category is None for category in detail.json()["categories"].values())
+    assert detail.json()["weakest"] is None
 
 
 @pytest.mark.parametrize("target", ("dataset", "schema"))
