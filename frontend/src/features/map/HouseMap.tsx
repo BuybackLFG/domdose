@@ -111,8 +111,23 @@ export function HouseMap({ selectedHouseId = null, onSelectHouse }: HouseMapProp
     // Prefix Leaflet по умолчанию содержит внешнюю ссылку; attribution — только текст manifest.
     map.attributionControl.setPrefix(false)
 
-    L.rectangle(OVERVIEW_BOUNDS, { stroke: false, fillColor: '#aad3df', fillOpacity: 1, interactive: false }).addTo(map)
-    L.geoJSON(coastline as GeoJsonObject, { style: { stroke: false, fillColor: '#f2efe9', fillOpacity: 1 }, interactive: false }).addTo(map)
+    // Береговая линия и фон — отдельная панель ниже растра. Иначе SVG Leaflet
+    // (z-index 200 внутри overlayPane) перекрывает PNG-подложку (z-index 1).
+    const coastPane = map.createPane('pilotCoast')
+    coastPane.style.zIndex = '350'
+
+    L.rectangle(OVERVIEW_BOUNDS, {
+      pane: 'pilotCoast',
+      stroke: false,
+      fillColor: '#aad3df',
+      fillOpacity: 1,
+      interactive: false,
+    }).addTo(map)
+    L.geoJSON(coastline as GeoJsonObject, {
+      pane: 'pilotCoast',
+      style: { stroke: false, fillColor: '#f2efe9', fillOpacity: 1 },
+      interactive: false,
+    }).addTo(map)
 
     // Один оверлей на тех же bounds: при смене уровня меняется только src.
     let currentImageUrl = imageUrlForZoom(map.getZoom())
