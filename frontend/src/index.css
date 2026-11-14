@@ -264,27 +264,15 @@ main > .hero.hero--split {
   .dossier-window__cats,
   .dossier-window__facts,
   .dossier-window__more { display: none; }
-  .dossier-window__score b { font-size: 44px; }
+  .dossier-window__score b { font-size: 36px; }
   .win-event { padding: 7px 0; }
   .hero__media .dossier-window { min-height: 286px; }
 }
 
 /* ---------------------------------------------------------------- выборка */
-.sample-plot {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  gap: var(--s-2);
-  align-items: stretch;
-}
-.sample-plot__body { min-width: 0; }
-.sample-axis-label { margin: 0; font-size: 12px; line-height: 1.2; color: var(--muted); }
-.sample-axis-label--y {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  justify-self: center;
-  align-self: center;
-}
-.sample-axis-label--x { margin-top: var(--s-2); text-align: center; }
+.sample-chart-block { min-width: 0; }
+.sample-axis-label { margin: 0 0 var(--s-2); font-size: 12px; line-height: 1.2; color: var(--muted); }
+.sample-axis-label--x { margin: var(--s-2) 0 0; text-align: center; }
 .sample-stats {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--s-5) var(--gutter);
@@ -410,6 +398,14 @@ main > .hero.hero--split {
   .map-legend { display: none; }
   .map-card { left: var(--s-3); right: var(--s-3); bottom: var(--s-3); width: auto; }
   .map-status { left: var(--s-3); right: var(--s-3); top: var(--s-3); max-width: none; }
+  .leaflet-control-zoom a { width: 44px !important; height: 44px !important; line-height: 44px !important; }
+  /* 44px tap target around the 16–22px dot, the dot stays centred on its coordinate */
+  .house-marker {
+    width: 44px !important; height: 44px !important;
+    margin-left: -22px !important; margin-top: -22px !important;
+    display: grid !important; place-items: center;
+  }
+  .house-marker span { grid-area: 1 / 1; }
 }
 
 /* Leaflet в цветах страницы */
@@ -516,7 +512,7 @@ main > .hero.hero--split {
 
 .category-panel { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
 .category-panel__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-4); }
-.category-panel__head h3 { font-size: var(--t-h3); }
+.category-panel__head h3 { font-size: var(--t-card); }
 .category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
 .category-card {
   display: flex; flex-direction: column; gap: 9px;
@@ -588,9 +584,9 @@ main > .hero.hero--split {
 }
 
 /* ---------------------------------------------------------------- события */
-.events-layout { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gutter); align-items: start; }
-.events-aside { grid-column: 1 / span 3; display: grid; gap: var(--s-3); align-content: start; }
-.events-main { grid-column: 5 / -1; min-width: 0; }
+.events-layout { display: grid; gap: var(--s-4); }
+.events-aside { display: grid; gap: var(--s-3); }
+.events-main { min-width: 0; }
 .events-aside > p { margin: 0; font-size: var(--t-small); color: var(--muted); line-height: 1.5; }
 .filter-row { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: 0; }
 .filter-chip {
@@ -644,10 +640,6 @@ main > .hero.hero--split {
 .event-tag--warn { border-color: color-mix(in oklab, var(--data-mid) 40%, var(--line)); color: var(--data-mid); }
 .event-more { margin-top: var(--s-5); }
 
-@media (max-width: 1023px) {
-  .events-layout { grid-template-columns: minmax(0, 1fr); }
-  .events-aside, .events-main { grid-column: 1 / -1; }
-}
 @media (max-width: 639px) {
   .event-item { grid-template-columns: 9px minmax(0, 1fr); }
   .event-item__side { grid-column: 2; flex-direction: row; align-items: center; justify-content: space-between; }

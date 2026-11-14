@@ -50,48 +50,46 @@ export function SampleOverview({ list, selectedHouseId }: SampleOverviewProps) {
           </div>
         </dl>
 
-        <div className="sample-plot">
-          <p className="sample-axis-label sample-axis-label--y">Записей</p>
-          <div className="sample-plot__body">
-            <div
-              className="sample-chart"
-              role="img"
-              aria-label={`Число записей у каждого из ${houses.length || 20} домов: от 0 до ${maxEvents}`}
-            >
-              {houses.length === 0
-                ? Array.from({ length: 20 }, (_, index) => (
-                  <span key={index} className="sample-bar" data-band="none">
-                    <span className="sample-bar__fill" style={{ '--bar': '2%' } as React.CSSProperties} />
+        <div className="sample-chart-block">
+          <p className="sample-axis-label">Записей</p>
+          <div
+            className="sample-chart"
+            role="img"
+            aria-label={`Число записей у каждого из ${houses.length || 20} домов: от 0 до ${maxEvents}`}
+          >
+            {houses.length === 0
+              ? Array.from({ length: 20 }, (_, index) => (
+                <span key={index} className="sample-bar" data-band="none">
+                  <span className="sample-bar__fill" style={{ '--bar': '2%' } as React.CSSProperties} />
+                </span>
+              ))
+              : houses.map((house) => {
+                const count = house.event_count ?? 0;
+                const band = scoreBand(house.overall_score);
+                return (
+                  <span
+                    key={house.house_id}
+                    className="sample-bar"
+                    data-band={band}
+                    data-selected={house.house_id === selectedHouseId}
+                    title={`${house.address}: ${count} записей`}
+                    style={{ '--bar': `${Math.max(2, (count / maxEvents) * 100)}%` } as React.CSSProperties}
+                  >
+                    <span className="sample-bar__fill" />
                   </span>
-                ))
-                : houses.map((house) => {
-                  const count = house.event_count ?? 0;
-                  const band = scoreBand(house.overall_score);
-                  return (
-                    <span
-                      key={house.house_id}
-                      className="sample-bar"
-                      data-band={band}
-                      data-selected={house.house_id === selectedHouseId}
-                      title={`${house.address}: ${count} записей`}
-                      style={{ '--bar': `${Math.max(2, (count / maxEvents) * 100)}%` } as React.CSSProperties}
-                    >
-                      <span className="sample-bar__fill" />
-                    </span>
-                  );
-                })}
-            </div>
-
-            <div className="sample-axis" aria-hidden="true">
-              <span>1</span>
-              <span>5</span>
-              <span>10</span>
-              <span>15</span>
-              <span>20</span>
-            </div>
+                );
+              })}
           </div>
+
+          <div className="sample-axis" aria-hidden="true">
+            <span>1</span>
+            <span>5</span>
+            <span>10</span>
+            <span>15</span>
+            <span>20</span>
+          </div>
+          <p className="sample-axis-label sample-axis-label--x">Дома выборки</p>
         </div>
-        <p className="sample-axis-label sample-axis-label--x">Дома выборки</p>
 
         <div className="sample-legend" aria-label="Цвет столбика">
           {(['good', 'mid', 'bad', 'none'] as const).map((band) => (
