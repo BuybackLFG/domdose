@@ -1,4 +1,6 @@
 import L from 'leaflet';
+import type { GeoJsonObject } from 'geojson';
+import coastline from './map/coastline.json';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PILOT_HOUSES } from './pilotHouses';
@@ -23,11 +25,8 @@ const MARKER_FIT_PADDING = 32;
 /** Доля вида у каждого края, попадание выбранного дома в которую сдвигает карту. */
 const VIEW_EDGE_SHARE = 0.1;
 
-/**
- * Запас покрытия 2 px с каждой стороны (отрицательный padding getBoundsZoom):
- * Leaflet не исправляет выход вида за maxBounds до 1 px, и у края оставалась полоса фона.
- */
-const COVER_OVERSCAN = L.point(-4, -4);
+// Внешний обзор содержит упрощённую береговую линию OSM.
+const OVERVIEW_BOUNDS = L.latLngBounds([42.7, 130.8], [43.7, 133.2]);
 
 const OVERLAY_BOUNDS = L.latLngBounds(
   [PILOT_MAP.southWest.lat, PILOT_MAP.southWest.lng],
@@ -48,24 +47,24 @@ function markerIcon(selected: boolean): L.DivIcon {
 }
 
 /**
- * Ставит minZoom равным зуму, при котором подложка покрывает весь контейнер.
+ * Ставит minZoom так, чтобы внешний обзор целиком помещался в контейнер.
  * getBoundsZoom ограничен текущим minZoom снизу, поэтому он сначала сбрасывается:
  * иначе при сужении контейнера минимум не уменьшится. Возвращает false без размера.
  */
-function applyCoverMinZoom(map: L.Map): boolean {
+function applyOverviewMinZoom(map: L.Map): boolean {
   const size = map.getSize();
   if (size.x === 0 || size.y === 0) return false;
   map.setMinZoom(0);
-  map.setMinZoom(map.getBoundsZoom(OVERLAY_BOUNDS, true, COVER_OVERSCAN));
+  map.setMinZoom(map.getBoundsZoom(OVERVIEW_BOUNDS, false));
   return true;
 }
 
 /**
- * Вписывает вид во все маркеры с отступом; зум не ниже покрывающего minZoom.
+ * Вписывает вид во все маркеры с отступом; зум не ниже обзорного minZoom.
  * Без измеренного контейнера возвращает false: зум вписывания там не определён.
  */
 function fitToHouses(map: L.Map, houses: readonly PlacedHouse[]): boolean {
-  if (houses.length === 0 || !applyCoverMinZoom(map)) return false;
+  if (houses.length === 0 || !applyOverviewMinZoom(map)) return false;
   const size = map.getSize();
   if (size.x <= 2 * MARKER_FIT_PADDING || size.y <= 2 * MARKER_FIT_PADDING) return false;
   map.fitBounds(
@@ -114,24 +113,30 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
     if (!container || mapRef.current) return;
 
     const reduceMotion = prefersReducedMotion();
-    // Вид не выходит за подложку; zoomSnap 0 — покрытие без округления зума вверх.
+    // Дробный зум позволяет показать обзор целиком при любой форме контейнера.
     const map = L.map(container, {
       zoomControl: true,
       attributionControl: true,
       keyboard: true,
-      scrollWheelZoom: false,
+      scrollWheelZoom: true,
+      touchZoom: true,
       maxZoom: PILOT_MAP.maxZoom,
       zoomSnap: 0,
-      maxBounds: OVERLAY_BOUNDS,
+      maxBounds: OVERVIEW_BOUNDS,
       maxBoundsViscosity: 1,
       zoomAnimation: !reduceMotion,
       fadeAnimation: !reduceMotion,
       markerZoomAnimation: !reduceMotion,
     });
+    map.zoomControl.getContainer()?.querySelector('.leaflet-control-zoom-in')?.setAttribute('aria-label', 'Приблизить карту');
+    map.zoomControl.getContainer()?.querySelector('.leaflet-control-zoom-out')?.setAttribute('aria-label', 'Отдалить карту');
     // Prefix Leaflet по умолчанию содержит внешнюю ссылку; attribution — только текст manifest.
     map.attributionControl.setPrefix(false);
 
-    // Один оверлей на тех же bounds: при смене уровня меняется только src.
+    L.rectangle(OVERVIEW_BOUNDS, { stroke: false, fillColor: '#aad3df', fillOpacity: 1, interactive: false }).addTo(map);
+    L.geoJSON(coastline as GeoJsonObject, { style: { stroke: false, fillColor: '#f2efe9', fillOpacity: 1 }, interactive: false }).addTo(map);
+
+    // Один детальный оверлей на тех же bounds: при смене уровня меняется только src.
     let currentImageUrl = imageUrlForZoom(map.getZoom());
     const overlay = L.imageOverlay(
       currentImageUrl,
@@ -152,21 +157,21 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
     };
     map.on('zoomend', syncImageUrl);
 
-    applyCoverMinZoom(map);
-    map.setView(OVERLAY_BOUNDS.getCenter(), map.getMinZoom(), { animate: false });
+    applyOverviewMinZoom(map);
+    map.setView(OVERVIEW_BOUNDS.getCenter(), map.getMinZoom(), { animate: false });
     syncImageUrl();
 
     // Размер контейнера может появиться или измениться позже: покрытие и начальный вид
     // пересчитываются по факту измерения.
     const observer = new ResizeObserver(() => {
       map.invalidateSize({ animate: false });
-      if (!applyCoverMinZoom(map)) return;
+      if (!applyOverviewMinZoom(map)) return;
       if (!fittedRef.current && fitToHouses(map, placedRef.current)) {
         fittedRef.current = true;
         const selected = placedRef.current.find((house) => house.house_id === selectedIdRef.current);
         revealHouse(map, selected, false);
       }
-      map.panInsideBounds(OVERLAY_BOUNDS, { animate: false });
+      map.panInsideBounds(OVERVIEW_BOUNDS, { animate: false });
     });
     observer.observe(container);
     mapRef.current = map;
@@ -217,7 +222,9 @@ export function HouseMap({ houses, selectedHouseId, onSelectHouse }: HouseMapPro
         marker.setZIndexOffset(selected ? 1000 : 0);
       }
 
-      marker.bindTooltip(house.address, {
+      const label = document.createElement('span');
+      label.textContent = house.address;
+      marker.bindTooltip(label, {
         permanent: false,
         direction: 'top',
         offset: [0, -14],
