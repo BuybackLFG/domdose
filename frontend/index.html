@@ -1,13 +1,38 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-type="software" data-radius="soft" data-buttons="solid" data-motion>
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light" />
-    <title>ДомДосье — коммунальный рейтинг</title>
+    <meta name="site-kind" content="software" />
+    <meta name="page-type" content="software" />
+    <meta name="theme-color" content="#eef0f3" />
+    <title>ДомДосье — коммунальное досье дома во Владивостоке</title>
+    <meta
+      name="description"
+      content="Отключения воды, электричества и отопления за 30 дней в одном досье. Сравните дом с 19 другими до покупки или аренды."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ДомДосье — коммунальное досье дома во Владивостоке" />
+    <meta
+      property="og:description"
+      content="История отключений и индекс коммунальной надёжности для 20 домов Владивостока."
+    />
+    <meta property="og:image" content="/maps/vladivostok-pilot.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/system.css" />
+    <link rel="stylesheet" href="/assets/ui/cards.css" />
+    <link rel="stylesheet" href="/assets/motion/motion.css" />
+    <link rel="stylesheet" href="/assets/layout/layout.css" />
+    <link rel="stylesheet" href="/assets/icons/icon.css" />
+    <link rel="stylesheet" href="/src/index.css" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/assets/system.js"></script>
+    <script type="module" src="/assets/motion/motion.js"></script>
+    <script type="module" src="/assets/layout/layout.js"></script>
   </body>
 </html>

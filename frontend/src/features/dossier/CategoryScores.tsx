@@ -1,6 +1,7 @@
 import { categoryLabel, formatScore } from './format';
 import type { Loadable } from './useHouseDossier';
 import type { HouseCategories, HouseDetailResponse, MetricValues } from './types';
+import { WeakestCategory } from './WeakestCategory';
 
 interface CategoryScoresProps {
   detail: Loadable<HouseDetailResponse>;
@@ -14,60 +15,81 @@ const CATEGORY_ORDER: readonly (keyof HouseCategories)[] = [
 ];
 
 const METRIC_NOTES: readonly string[] = [
-  'Частота — сколько раз отключали за 30 дней. Аварийное отключение считается за 1, плановое — за 0,4; массовое или стихийное — вдвое меньше.',
+  'Частота — сколько раз отключали за 30 дней. Аварийное отключение считается за 1, '
+    + 'плановое — за 0,4; массовое или стихийное — вдвое меньше.',
   'Часы — суммарная длительность отключений за 30 дней с теми же весами.',
   'Максимум — наибольшая длительность одного отключения после умножения на его вес, в часах.',
   'Оценки рассчитаны по найденным записям и сравнению с выбранными домами. Полнота журнала неизвестна.',
 ];
 
+function formatMetric(value: number): string {
+  return value.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+}
+
 function Metrics({ values, title }: { values: MetricValues; title: string }) {
   return (
-    <dl aria-label={title} className="mt-3 grid grid-cols-3 gap-2 text-xs">
+    <dl aria-label={title} className="category-card__metrics">
       <div>
-        <dt className="text-text-secondary">Частота</dt>
-        <dd className="mt-0.5 font-medium text-text">{values.frequency.toLocaleString('ru-RU')}</dd>
+        <dt>Частота</dt>
+        <dd>{formatMetric(values.frequency)}</dd>
       </div>
       <div>
-        <dt className="text-text-secondary">Часы</dt>
-        <dd className="mt-0.5 font-medium text-text">{values.hours.toLocaleString('ru-RU')}</dd>
+        <dt>Часы</dt>
+        <dd>{formatMetric(values.hours)}</dd>
       </div>
       <div>
-        <dt className="text-text-secondary">Максимум</dt>
-        <dd className="mt-0.5 font-medium text-text">{values.longest.toLocaleString('ru-RU')}</dd>
+        <dt>Максимум</dt>
+        <dd>{formatMetric(values.longest)}</dd>
       </div>
     </dl>
   );
 }
 
-/**
- * Тело карточки по состоянию досье: загрузка, отказ или оценка.
- * «Нет исходных данных» — только при отказе no_data, не во время загрузки.
- */
-function CategoryBody({ detail, category }: CategoryScoresProps & { category: keyof HouseCategories }) {
-  switch (detail.status) {
-    case 'idle':
-    case 'loading':
-      return <div aria-hidden="true" className="loading-pulse mt-3 h-14 rounded-lg bg-border/60" />;
-    case 'error':
-      return (
-        <p className="mt-3 text-sm font-medium text-text-secondary">
-          {detail.error.kind === 'no_data' ? 'Нет исходных данных' : 'Оценка недоступна'}
-        </p>
-      );
-    case 'success': {
-      const categoryDetail = detail.data.categories[category];
-      if (categoryDetail === null) return <p className="mt-3 text-sm text-text-secondary">Нет записей за период</p>;
-      return (
-        <>
-          <p className="mt-2 text-2xl font-semibold text-accent">
-            {formatScore(categoryDetail.score)}
-            <span className="ml-1 text-xs font-medium text-text-secondary">/ 100</span>
-          </p>
-          <Metrics values={categoryDetail.metrics} title={`Метрики: ${categoryLabel(category)}`} />
-        </>
-      );
-    }
+function CategoryBody({
+  detail,
+  category,
+}: {
+  detail: Loadable<HouseDetailResponse>;
+  category: keyof HouseCategories;
+}) {
+  if (detail.status === 'idle' || detail.status === 'loading') {
+    return (
+      <div aria-hidden="true" style={{ display: 'grid', gap: 8 }}>
+        <div className="skeleton" style={{ height: 24, width: '40%' }} />
+        <div className="skeleton" style={{ height: 5, width: '100%' }} />
+        <div className="skeleton" style={{ height: 32 }} />
+      </div>
+    );
   }
+
+  if (detail.status === 'error') {
+    return (
+      <p className="category-card__empty">
+        {detail.error.kind === 'no_data' ? 'Нет исходных данных' : 'Оценка недоступна'}
+      </p>
+    );
+  }
+
+  const categoryDetail = detail.data.categories[category];
+  if (categoryDetail === null) {
+    return <p className="category-card__empty">Нет записей за период</p>;
+  }
+
+  return (
+    <>
+      <p className="category-card__score text-2xl">
+        {formatScore(categoryDetail.score)}
+        <small> / 100</small>
+      </p>
+      <div className="category-card__track" aria-hidden="true">
+        <span
+          className="category-card__fill"
+          style={{ width: `${categoryDetail.score * 100}%` }}
+        />
+      </div>
+      <Metrics values={categoryDetail.metrics} title={`Метрики: ${categoryLabel(category)}`} />
+    </>
+  );
 }
 
 export function CategoryScores({ detail }: CategoryScoresProps) {
@@ -77,31 +99,38 @@ export function CategoryScores({ detail }: CategoryScoresProps) {
     <section
       aria-labelledby="category-scores-heading"
       aria-busy={pending}
-      className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-border sm:p-5"
+      className="category-panel"
     >
-      <h2 id="category-scores-heading" className="text-base font-semibold text-text">
-        Оценки категорий
-      </h2>
-      {pending && (
-        <p role="status" className="loading-pulse mt-1 text-sm text-text-secondary">
-          Загружаем оценки категорий…
-        </p>
-      )}
+      <div className="category-panel__head">
+        <h3 id="category-scores-heading">Оценки категорий</h3>
+        {pending && (
+          <p role="status" className="loading-pulse t-small muted" style={{ margin: 0 }}>
+            Загружаем оценки…
+          </p>
+        )}
+      </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="category-grid">
         {CATEGORY_ORDER.map((category) => (
-          <article key={category} className="rounded-xl border border-border bg-surface-subtle p-3">
-            <h3 className="text-sm font-semibold text-text">{categoryLabel(category)}</h3>
+          <article key={category} className="category-card">
+            <div className="category-card__head">
+              <h4 className="category-card__name">
+                <span className="category-card__mark" data-category={category} aria-hidden="true" />
+                {categoryLabel(category)}
+              </h4>
+            </div>
             <CategoryBody detail={detail} category={category} />
           </article>
         ))}
       </div>
 
-      <div className="mt-4 space-y-1 text-xs leading-5 text-text-secondary">
+      <div className="metric-notes">
         {METRIC_NOTES.map((note) => (
           <p key={note}>{note}</p>
         ))}
       </div>
+
+      {detail.status === 'success' && <WeakestCategory detail={detail.data} />}
     </section>
   );
 }

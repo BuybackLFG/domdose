@@ -13,6 +13,12 @@ const DATE_FORMAT = new Intl.DateTimeFormat('ru-RU', {
   timeZone: 'Asia/Vladivostok',
 });
 
+const DAY_FORMAT = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'Asia/Vladivostok',
+});
+
 const PLURAL_RULES = new Intl.PluralRules('ru-RU');
 
 const ADDRESS_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {
@@ -28,6 +34,8 @@ const CATEGORY_LABELS: Record<UtilityCategory, string> = {
   heating: 'Отопление',
 };
 
+export type ScoreBand = 'good' | 'mid' | 'bad' | 'none';
+
 export function formatScore(score: number): string {
   return `${(score * 100).toLocaleString('ru-RU', {
     minimumFractionDigits: 0,
@@ -35,8 +43,21 @@ export function formatScore(score: number): string {
   })}`;
 }
 
+/** Полоса индекса для маркеров, столбиков и подписи сводки. */
+export function scoreBand(score: number | null): ScoreBand {
+  if (score === null) return 'none';
+  if (score >= 0.9) return 'good';
+  if (score >= 0.75) return 'mid';
+  return 'bad';
+}
+
 export function formatDateTime(value: string): string {
   return DATE_TIME_FORMAT.format(new Date(value));
+}
+
+/** Дата без года и времени: «22 окт.». */
+export function formatDay(value: string): string {
+  return DAY_FORMAT.format(new Date(value));
 }
 
 /** Период окна датами без времени и пояса: «14 окт. 2026 г. – 13 нояб. 2026 г.». */
