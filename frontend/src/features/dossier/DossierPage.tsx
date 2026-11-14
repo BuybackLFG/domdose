@@ -12,7 +12,7 @@ import { formatScore, scoreBand } from './format';
 import { useHouseDossier } from './useHouseDossier';
 
 const HEADER_NOTE = 'Приближённые данные по публичным объявлениям об отключениях. '
-  + 'Дома сравниваются между собой, а не со всем Владивостоком.';
+  + 'Дома сравниваются между собой.';
 
 function detailStatus(status: 'idle' | 'loading' | 'success' | 'error') {
   if (status === 'success') return 'success' as const;
