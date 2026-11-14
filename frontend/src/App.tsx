@@ -1,5 +1,6 @@
 import { SearchPage } from './features/search/SearchPage'
-import { HousePage, NotFoundPage } from './features/house/HousePage'
+import { HousePage } from './features/house/HousePage'
+import { NotFoundPage } from './features/house/NotFoundPage'
 import { matchHouseId, usePathname } from './lib/router'
 
 export default function App() {
