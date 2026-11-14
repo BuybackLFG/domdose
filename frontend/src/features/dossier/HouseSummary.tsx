@@ -73,7 +73,7 @@ export function HouseSummary({
                 >
                   <p className="score-ring__text text-3xl">
                     <span className="score-ring__value">{formatScore(detail.data.overall_score)}</span>
-                    <small className="score-ring__unit">/ 100</small>
+                    <small className="sr-only">/ 100</small>
                   </p>
                 </div>
                 <div className="score-note">

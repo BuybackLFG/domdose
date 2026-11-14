@@ -19,7 +19,7 @@ export function WeakestCategory({ detail }: WeakestCategoryProps) {
         <p className="weakest__value">
           {categoryLabel(detail.weakest)}
           <b className="weakest__score">{formatScore(weakest.score)}</b>
-          <span className="t-small muted">/ 100</span>
+          <span className="sr-only">/ 100</span>
         </p>
       </div>
     </section>

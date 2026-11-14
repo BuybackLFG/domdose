@@ -79,7 +79,7 @@ function CategoryBody({
     <>
       <p className="category-card__score text-2xl">
         {formatScore(categoryDetail.score)}
-        <small> / 100</small>
+        <small className="sr-only"> / 100</small>
       </p>
       <div className="category-card__track" aria-hidden="true">
         <span
